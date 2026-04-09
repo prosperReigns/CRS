@@ -105,6 +105,8 @@ class CellReportViewSet(viewsets.ModelViewSet):
         report = self.get_object()
         if request.user.role != User.Role.PASTOR:
             raise PermissionDenied("Only pastors can reject reports.")
+        if report.status != CellReport.Status.REVIEWED:
+            return Response({"detail": "Report must be reviewed before rejection."}, status=status.HTTP_400_BAD_REQUEST)
 
         report.status = CellReport.Status.REJECTED
         report.approved_by = request.user
@@ -120,6 +122,11 @@ class CellReportViewSet(viewsets.ModelViewSet):
         report = self.get_object()
         if request.user.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR}:
             raise PermissionDenied("Only fellowship leaders and pastors can comment.")
+        if (
+            request.user.role == User.Role.FELLOWSHIP_LEADER
+            and report.cell.fellowship.leader_id != request.user.id
+        ):
+            raise PermissionDenied("You can only comment on reports in your fellowship.")
 
         serializer = ReportCommentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

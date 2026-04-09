@@ -106,6 +106,10 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             images = attrs.get("images") or []
             if len(images) < 1:
                 raise serializers.ValidationError({"images": "At least one image is required."})
+        else:
+            incoming_images = attrs.get("images")
+            if incoming_images is not None and len(incoming_images) < 1 and not self.instance.images.exists():
+                raise serializers.ValidationError({"images": "At least one image is required."})
 
         if user.role == User.Role.CELL_LEADER and cell and cell.leader_id != user.id:
             raise serializers.ValidationError({"cell": "Cell leaders can only submit for their own cell."})
