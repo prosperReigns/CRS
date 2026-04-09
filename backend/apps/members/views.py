@@ -1,5 +1,5 @@
-from django.db import models, transaction
-from django.db.models import Case, DateField, F, Q, Value, When
+from django.db import transaction
+from django.db.models import Case, DateField, F, Value, When
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError

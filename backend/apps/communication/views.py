@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Case, Count, F, IntegerField, Max, OuterRef, Q, Subquery, Value, When
-from rest_framework import status, viewsets
+from django.db.models import Case, Count, F, IntegerField, Max, OuterRef, Q, Subquery, When
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
