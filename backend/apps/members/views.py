@@ -28,7 +28,20 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [MemberProfilePermission]
 
     def get_queryset(self):
-        return scoped_member_profiles(self.request.user)
+        qs = scoped_member_profiles(self.request.user)
+
+        role = self.request.query_params.get("role")
+        if role:
+            valid_roles = {choice[0] for choice in User.Role.choices}
+            if role not in valid_roles:
+                raise ValidationError({"role": "Invalid role filter."})
+            qs = qs.filter(user__role=role)
+
+        cell_id = self.request.query_params.get("cell")
+        if cell_id:
+            qs = qs.filter(cell_id=cell_id)
+
+        return qs
 
     def perform_create(self, serializer):
         user = self.request.user
