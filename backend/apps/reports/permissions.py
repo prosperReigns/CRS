@@ -4,6 +4,18 @@ from apps.accounts.models import User
 
 
 class CellReportPermission(BasePermission):
+    @staticmethod
+    def _is_admin(role):
+        return role in {User.Role.PASTOR, User.Role.STAFF}
+
+    @staticmethod
+    def _is_fellowship_owner(user, obj):
+        return obj.cell.fellowship.leader_id == user.id
+
+    @staticmethod
+    def _is_cell_owner(user, obj):
+        return obj.cell.leader_id == user.id
+
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
@@ -27,18 +39,18 @@ class CellReportPermission(BasePermission):
     def has_object_permission(self, request, view, obj):
         role = request.user.role
         if request.method in SAFE_METHODS:
-            if role in {User.Role.PASTOR, User.Role.STAFF}:
+            if self._is_admin(role):
                 return True
             if role == User.Role.FELLOWSHIP_LEADER:
-                return obj.cell.fellowship.leader_id == request.user.id
+                return self._is_fellowship_owner(request.user, obj)
             if role == User.Role.CELL_LEADER:
-                return obj.cell.leader_id == request.user.id
+                return self._is_cell_owner(request.user, obj)
             return False
 
-        if role in {User.Role.PASTOR, User.Role.STAFF}:
+        if self._is_admin(role):
             return True
         if view.action in {"review", "comment"} and role == User.Role.FELLOWSHIP_LEADER:
-            return obj.cell.fellowship.leader_id == request.user.id
+            return self._is_fellowship_owner(request.user, obj)
         if view.action in {"update", "partial_update", "destroy"} and role == User.Role.CELL_LEADER:
-            return obj.cell.leader_id == request.user.id
+            return self._is_cell_owner(request.user, obj)
         return False
