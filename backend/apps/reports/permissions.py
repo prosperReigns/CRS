@@ -41,8 +41,4 @@ class CellReportPermission(BasePermission):
             return obj.cell.fellowship.leader_id == request.user.id
         if view.action in {"update", "partial_update", "destroy"} and role == User.Role.CELL_LEADER:
             return obj.cell.leader_id == request.user.id
-        if role == User.Role.FELLOWSHIP_LEADER:
-            return False
-        if role == User.Role.CELL_LEADER:
-            return False
         return False
