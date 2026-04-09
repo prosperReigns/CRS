@@ -1,0 +1,159 @@
+from django.db import transaction
+from django.utils import timezone
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+
+from apps.accounts.models import User
+from apps.communication.models import Notification
+from .models import CellReport, ReportActivityLog, ReportComment
+from .permissions import CellReportPermission
+from .serializers import (
+    CellReportCreateUpdateSerializer,
+    CellReportSerializer,
+    ReportCommentCreateSerializer,
+    ReportCommentSerializer,
+)
+
+
+def scoped_reports(user):
+    qs = (
+        CellReport.objects.select_related(
+            "cell",
+            "cell__fellowship",
+            "submitted_by",
+            "reviewed_by",
+            "approved_by",
+        )
+        .prefetch_related("images", "comments__author", "activity_logs")
+        .all()
+    )
+
+    if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        return qs
+    if user.role == User.Role.FELLOWSHIP_LEADER:
+        return qs.filter(cell__fellowship__leader=user)
+    if user.role == User.Role.CELL_LEADER:
+        return qs.filter(cell__leader=user)
+    return qs.none()
+
+
+class CellReportViewSet(viewsets.ModelViewSet):
+    permission_classes = [CellReportPermission]
+
+    def get_queryset(self):
+        return scoped_reports(self.request.user)
+
+    def get_serializer_class(self):
+        if self.action in {"create", "update", "partial_update"}:
+            return CellReportCreateUpdateSerializer
+        return CellReportSerializer
+
+    def perform_create(self, serializer):
+        report = serializer.save()
+        self._log(report, ReportActivityLog.Action.CREATED)
+        self._notify(report, "Report Submitted", "A new report has been submitted.")
+
+    def perform_update(self, serializer):
+        report = self.get_object()
+        if report.status == CellReport.Status.APPROVED:
+            raise PermissionDenied("Approved reports cannot be edited.")
+        serializer.save()
+
+    @action(detail=True, methods=["patch"])
+    @transaction.atomic
+    def review(self, request, pk=None):
+        report = self.get_object()
+        if request.user.role != User.Role.FELLOWSHIP_LEADER:
+            raise PermissionDenied("Only fellowship leaders can review reports.")
+        if report.cell.fellowship.leader_id != request.user.id:
+            raise PermissionDenied("You can only review reports in your fellowship.")
+        if report.status != CellReport.Status.PENDING:
+            return Response({"detail": "Only pending reports can be reviewed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        report.status = CellReport.Status.REVIEWED
+        report.reviewed_by = request.user
+        report.reviewed_at = timezone.now()
+        report.save(update_fields=["status", "reviewed_by", "reviewed_at", "updated_at"])
+
+        self._log(report, ReportActivityLog.Action.REVIEWED)
+        self._notify(report, "Report Reviewed", "Your cell report has been reviewed.")
+        return Response(CellReportSerializer(report).data)
+
+    @action(detail=True, methods=["patch"])
+    @transaction.atomic
+    def approve(self, request, pk=None):
+        report = self.get_object()
+        if request.user.role != User.Role.PASTOR:
+            raise PermissionDenied("Only pastors can approve reports.")
+        if report.status != CellReport.Status.REVIEWED:
+            return Response({"detail": "Report must be reviewed before approval."}, status=status.HTTP_400_BAD_REQUEST)
+
+        report.status = CellReport.Status.APPROVED
+        report.approved_by = request.user
+        report.approved_at = timezone.now()
+        report.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+
+        self._log(report, ReportActivityLog.Action.APPROVED)
+        self._notify(report, "Report Approved", "Your cell report has been approved.")
+        return Response(CellReportSerializer(report).data)
+
+    @action(detail=True, methods=["patch"])
+    @transaction.atomic
+    def reject(self, request, pk=None):
+        report = self.get_object()
+        if request.user.role != User.Role.PASTOR:
+            raise PermissionDenied("Only pastors can reject reports.")
+
+        report.status = CellReport.Status.REJECTED
+        report.approved_by = request.user
+        report.save(update_fields=["status", "approved_by", "updated_at"])
+
+        self._log(report, ReportActivityLog.Action.REJECTED)
+        self._notify(report, "Report Rejected", "Your cell report has been rejected.")
+        return Response(CellReportSerializer(report).data)
+
+    @action(detail=True, methods=["post"])
+    @transaction.atomic
+    def comment(self, request, pk=None):
+        report = self.get_object()
+        if request.user.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR}:
+            raise PermissionDenied("Only fellowship leaders and pastors can comment.")
+
+        serializer = ReportCommentCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        comment = ReportComment.objects.create(
+            report=report,
+            author=request.user,
+            comment=serializer.validated_data["comment"],
+        )
+
+        self._log(report, ReportActivityLog.Action.COMMENTED, note=comment.comment)
+        self._notify(report, "New Report Comment", "A comment has been added to your report.")
+
+        return Response(ReportCommentSerializer(comment).data, status=status.HTTP_201_CREATED)
+
+    def _log(self, report, action, note=""):
+        ReportActivityLog.objects.create(report=report, actor=self.request.user, action=action, note=note)
+
+    def _notify(self, report, title, message):
+        recipient_ids = {
+            report.submitted_by_id,
+            report.cell.leader_id,
+            report.cell.fellowship.leader_id,
+        }
+        recipient_ids.discard(None)
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user_id=user_id,
+                    title=title,
+                    message=message,
+                    category=Notification.Category.REPORT,
+                )
+                for user_id in recipient_ids
+                if user_id != self.request.user.id
+            ]
+        )

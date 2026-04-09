@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import importlib.util
 from pathlib import Path
 from decouple import config
 
@@ -26,7 +27,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*").split(",")
 
 
 # Application definition
@@ -39,14 +40,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'django_filters',
-
-    'accounts',
-    'structure',
-    'reports',
-    'members',
-    'communication',
+    'apps.accounts.apps.AccountsConfig',
+    'apps.structure.apps.StructureConfig',
+    'apps.reports.apps.ReportsConfig',
+    'apps.members.apps.MembersConfig',
+    'apps.communication.apps.CommunicationConfig',
 ]
+
+if importlib.util.find_spec("django_filters"):
+    INSTALLED_APPS.append("django_filters")
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -121,14 +123,21 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_FILTER_BACKENDS": [
+        "rest_framework.filters.OrderingFilter",
+        "rest_framework.filters.SearchFilter",
+    ],
 }
+
+if importlib.util.find_spec("django_filters"):
+    REST_FRAMEWORK["DEFAULT_FILTER_BACKENDS"].insert(0, "django_filters.rest_framework.DjangoFilterBackend")
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Lagos'
 
 USE_I18N = True
 

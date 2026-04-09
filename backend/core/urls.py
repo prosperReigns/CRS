@@ -21,13 +21,12 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/structure/', include('structure.urls')),
-    path('api/members/', include('members.urls')),
-    path('api/accounts/', include('accounts.urls')),
-    path('api/reports/', include('reports.urls')),
-    path('api/communication/', include('communication.urls')),
+    path('api/structure/', include('apps.structure.urls')),
+    path('api/members/', include('apps.members.urls')),
+    path('api/accounts/', include('apps.accounts.urls')),
+    path('api/reports/', include('apps.reports.urls')),
+    path('api/communication/', include('apps.communication.urls')),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
