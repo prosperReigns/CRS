@@ -21,16 +21,28 @@ class CellReportPermission(BasePermission):
         return request.user.role in {
             User.Role.PASTOR,
             User.Role.STAFF,
-            User.Role.FELLOWSHIP_LEADER,
             User.Role.CELL_LEADER,
         }
 
     def has_object_permission(self, request, view, obj):
         role = request.user.role
+        if request.method in SAFE_METHODS:
+            if role in {User.Role.PASTOR, User.Role.STAFF}:
+                return True
+            if role == User.Role.FELLOWSHIP_LEADER:
+                return obj.cell.fellowship.leader_id == request.user.id
+            if role == User.Role.CELL_LEADER:
+                return obj.cell.leader_id == request.user.id
+            return False
+
         if role in {User.Role.PASTOR, User.Role.STAFF}:
             return True
-        if role == User.Role.FELLOWSHIP_LEADER:
+        if view.action in {"review", "comment"} and role == User.Role.FELLOWSHIP_LEADER:
             return obj.cell.fellowship.leader_id == request.user.id
-        if role == User.Role.CELL_LEADER:
+        if view.action in {"update", "partial_update", "destroy"} and role == User.Role.CELL_LEADER:
             return obj.cell.leader_id == request.user.id
+        if role == User.Role.FELLOWSHIP_LEADER:
+            return False
+        if role == User.Role.CELL_LEADER:
+            return False
         return False
