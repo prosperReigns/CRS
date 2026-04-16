@@ -17,6 +17,7 @@ class CellReport(models.Model):
 
     cell = models.ForeignKey(Cell, on_delete=models.CASCADE, related_name="reports")
     submitted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="submitted_reports")
+    leader = models.ForeignKey(User, on_delete=models.CASCADE)
     meeting_date = models.DateField(db_index=True)
     service = models.ForeignKey(ChurchService, null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
     attendees = models.ManyToManyField(MemberProfile, related_name="cell_reports")

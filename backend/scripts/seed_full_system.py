@@ -1,65 +1,76 @@
 import os
-import django
+import sys
 from datetime import date, timedelta, time
+from pathlib import Path
+
+import django
+from django.db import transaction
+
+# Ensure this script works when run directly from any working directory.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
 from django.contrib.auth import get_user_model
-from structure.models import Fellowship, Cell
-from members.models import MemberProfile
-from reports.models import CellReport
-from communication.models import Message
-from attendance.models import ChurchService, Attendance
+
+from apps.communication.models import Message
+from apps.members.models import Attendance, ChurchService, MemberProfile
+from apps.reports.models import CellReport
+from apps.structure.models import Cell, Fellowship
 
 User = get_user_model()
 
 
+def upsert_user(*, username: str, role: str, password: str = "password"):
+    user, _ = User.objects.update_or_create(
+        username=username,
+        defaults={"role": role},
+    )
+
+    if not user.check_password(password):
+        user.set_password(password)
+        user.save(update_fields=["password"])
+
+    return user
+
+
+@transaction.atomic
 def run():
-    print("🌱 Seeding database...")
+    print("Seeding database...")
 
     # -----------------------------
     # USERS (ROLES)
     # -----------------------------
-    pastor = User.objects.create_user(
-        username="pastor",
-        password="password",
-        role="pastor"
-    )
+    pastor = upsert_user(username="pastor", role="pastor")
+    upsert_user(username="staff", role="staff")
+    fellowship_leader = upsert_user(username="fellowship_leader", role="fellowship_leader")
+    cell_leader = upsert_user(username="cell_leader", role="cell_leader")
 
-    staff = User.objects.create_user(
-        username="staff",
-        password="password",
-        role="staff"
-    )
-
-    fellowship_leader = User.objects.create_user(
-        username="fellowship_leader",
-        password="password",
-        role="fellowship_leader"
-    )
-
-    cell_leader = User.objects.create_user(
-        username="cell_leader",
-        password="password",
-        role="cell_leader"
-    )
+    print("Users ready")
 
     # -----------------------------
     # STRUCTURE
     # -----------------------------
-    fellowship = Fellowship.objects.create(
+    fellowship, _ = Fellowship.objects.update_or_create(
         name="Main Fellowship",
-        leader=fellowship_leader
+        defaults={"leader": fellowship_leader},
     )
 
-    cell = Cell.objects.create(
-        name="Cell A",
+    cell, _ = Cell.objects.update_or_create(
         fellowship=fellowship,
-        leader=cell_leader,
-        meeting_day="saturday",
-        meeting_time=time(17, 0)
+        name="Cell A",
+        defaults={
+            "leader": cell_leader,
+            "meeting_day": Cell.MeetingDay.SATURDAY,
+            "meeting_time": time(17, 0),
+            "venue": "Main Fellowship Center",
+        },
     )
+
+    print("Structure ready")
 
     # -----------------------------
     # MEMBERS
@@ -67,103 +78,119 @@ def run():
     members = []
 
     for i in range(1, 11):
-        user = User.objects.create_user(
-            username=f"member{i}",
-            password="password",
-            role="member"
-        )
+        user = upsert_user(username=f"member{i}", role="member")
 
-        profile = MemberProfile.objects.create(
+        profile, _ = MemberProfile.objects.update_or_create(
             user=user,
-            cell=cell,
-            is_baptised=True,
-            foundation_completed=True,
-            souls_won=i
+            defaults={
+                "cell": cell,
+                "is_baptised": True,
+                "foundation_completed": True,
+                "souls_won": i,
+            },
         )
-
         members.append(profile)
 
-    print("✅ Members created")
+    print("Members ready")
 
     # -----------------------------
     # CHURCH SERVICES
     # -----------------------------
-    service1 = ChurchService.objects.create(
+    service1, _ = ChurchService.objects.update_or_create(
         name="Service 1",
-        day_of_week="sunday",
-        start_time=time(8, 0),
+        defaults={
+            "day_of_week": ChurchService.DayOfWeek.SUNDAY,
+            "start_time": time(8, 0),
+            "is_active": True,
+        },
     )
-
-    service2 = ChurchService.objects.create(
+    service2, _ = ChurchService.objects.update_or_create(
         name="Service 2",
-        day_of_week="sunday",
-        start_time=time(10, 30),
+        defaults={
+            "day_of_week": ChurchService.DayOfWeek.SUNDAY,
+            "start_time": time(10, 30),
+            "is_active": True,
+        },
     )
 
-    print("✅ Services created")
+    print("Services ready")
 
     # -----------------------------
     # CELL REPORT (WITH ATTENDEES)
     # -----------------------------
     report_date = date.today() - timedelta(days=1)
 
-    report = CellReport.objects.create(
+    report, _ = CellReport.objects.update_or_create(
         cell=cell,
-        leader=cell_leader,
         meeting_date=report_date,
-        new_members=2,
-        offering_amount=5000,
-        summary="Great meeting with strong attendance"
+        defaults={
+            "submitted_by": cell_leader,
+            "leader": cell_leader,
+            "service": service1,
+            "new_members": 2,
+            "offering_amount": 5000,
+            "summary": "Great meeting with strong attendance",
+        },
     )
 
-    # Add attendees (first 6 members)
     report.attendees.set(members[:6])
+    report.sync_attendance_count()
 
-    print("✅ Report created with attendees")
+    print("Report ready")
 
     # -----------------------------
     # SERVICE ATTENDANCE
     # -----------------------------
     attendance_date = date.today()
 
-    for member in members[:8]:
-        Attendance.objects.create(
+    # Use disjoint groups so each member has only one record per service_type/day.
+    for member in members[:5]:
+        Attendance.objects.update_or_create(
             member=member,
-            service=service1,
-            date=attendance_date
+            date=attendance_date,
+            service_type=Attendance.ServiceType.SUNDAY,
+            defaults={
+                "service": service1,
+                "present": True,
+                "recorded_by": cell_leader,
+            },
         )
 
-    for member in members[2:10]:
-        Attendance.objects.create(
+    for member in members[5:]:
+        Attendance.objects.update_or_create(
             member=member,
-            service=service2,
-            date=attendance_date
+            date=attendance_date,
+            service_type=Attendance.ServiceType.MIDWEEK,
+            defaults={
+                "service": service2,
+                "present": True,
+                "recorded_by": cell_leader,
+            },
         )
 
-    print("✅ Attendance recorded")
+    print("Attendance ready")
 
     # -----------------------------
     # MESSAGES
     # -----------------------------
-    Message.objects.create(
+    Message.objects.get_or_create(
         sender=pastor,
-        receiver=fellowship_leader,
-        content="Please review reports before Sunday."
+        recipient=fellowship_leader,
+        content="Please review reports before Sunday.",
     )
-
-    Message.objects.create(
+    Message.objects.get_or_create(
         sender=fellowship_leader,
-        receiver=cell_leader,
-        content="Kindly submit your report."
+        recipient=cell_leader,
+        content="Kindly submit your report.",
     )
 
-    print("✅ Messages created")
+    print("Messages ready")
 
-    print("\n🎉 SEEDING COMPLETE!\n")
+    print("\nSEEDING COMPLETE\n")
     print("Login Credentials:")
-    print("Pastor → pastor / password")
-    print("Cell Leader → cell_leader / password")
-    print("Fellowship Leader → fellowship_leader / password")
+    print("Pastor -> pastor / password")
+    print("Cell Leader -> cell_leader / password")
+    print("Fellowship Leader -> fellowship_leader / password")
 
 
 if __name__ == "__main__":

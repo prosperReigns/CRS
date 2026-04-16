@@ -26,7 +26,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG_RAW = str(config("DEBUG", default="false")).strip().lower()
+DEBUG = DEBUG_RAW in {"1", "true", "yes", "on", "debug"}
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*").split(",")
 
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'apps.reports.apps.ReportsConfig',
     'apps.members.apps.MembersConfig',
     'apps.communication.apps.CommunicationConfig',
+    "core",
 ]
 
 if importlib.util.find_spec("django_filters"):
