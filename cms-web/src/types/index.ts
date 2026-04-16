@@ -126,7 +126,6 @@ export interface AnalyticsResponse {
   offering_total: number;
   souls_won: number;
   attendance_trend: Array<{ date: string; count: number }>;
-  service_attendance?: Array<{ service_id: number; name: string; attendance: number }>;
   services?: Array<{ service_id: number; name: string; attendance: number }>;
   daily_total_attendance?: Array<{ date: string; attendance: number }>;
   offering_trend: Array<{ meeting_date: string; total: number }>;

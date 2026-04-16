@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+from django.db.models import Q
 
 
 class Migration(migrations.Migration):
@@ -62,6 +63,7 @@ class Migration(migrations.Migration):
             constraint=models.UniqueConstraint(
                 fields=("member", "date", "service"),
                 name="uniq_member_attendance_per_church_service",
+                condition=Q(service__isnull=False),
             ),
         ),
     ]

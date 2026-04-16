@@ -84,11 +84,18 @@ class AttendanceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "recorded_by", "created_at", "updated_at", "member_name", "service_name"]
 
+    def _is_legacy_record_without_service(self, attrs):
+        return bool(
+            self.instance
+            and getattr(self.instance, "service_id", None) is None
+            and "service" not in attrs
+        )
+
     def validate(self, attrs):
         service = attrs.get("service") or getattr(self.instance, "service", None)
         attendance_date = attrs.get("date") or getattr(self.instance, "date", None)
         if not service:
-            if self.instance and getattr(self.instance, "service_id", None) is None and "service" not in attrs:
+            if self._is_legacy_record_without_service(attrs):
                 return attrs
             raise serializers.ValidationError({"service": "Service is required."})
         if attendance_date and service.day_of_week.lower() != attendance_date.strftime("%A").lower():

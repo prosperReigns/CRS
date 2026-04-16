@@ -68,7 +68,7 @@ function Dashboard() {
       </LineChart>
 
       <h3>Attendance by Service</h3>
-      <BarChart width={600} height={300} data={data.service_attendance || data.services || []}>
+      <BarChart width={600} height={300} data={data.services || []}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
         <YAxis />

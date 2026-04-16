@@ -76,6 +76,9 @@ function Attendance() {
 
       <input type="date" onChange={(e) => setDate(e.target.value)} />
       <select value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+        {services.length === 0 ? (
+          <option value="">No active services available</option>
+        ) : null}
         {services.map((service) => (
           <option key={service.id} value={service.id}>
             {service.name} ({service.day_of_week})

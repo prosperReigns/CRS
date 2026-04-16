@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.structure.models import Cell
@@ -118,6 +119,7 @@ class Attendance(models.Model):
             models.UniqueConstraint(
                 fields=["member", "date", "service"],
                 name="uniq_member_attendance_per_church_service",
+                condition=Q(service__isnull=False),
             ),
         ]
         indexes = [
