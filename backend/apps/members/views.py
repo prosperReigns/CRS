@@ -99,12 +99,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def bulk_mark(self, request):
         user = request.user
-        if user.role not in {
-            User.Role.PASTOR,
-            User.Role.STAFF,
-            User.Role.FELLOWSHIP_LEADER,
-            User.Role.CELL_LEADER,
-        }:
+        if user.role not in {User.Role.PASTOR, User.Role.STAFF}:
             raise PermissionDenied("You are not allowed to mark bulk attendance.")
 
         serializer = BulkAttendanceSerializer(data=request.data)

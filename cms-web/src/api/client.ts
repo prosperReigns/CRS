@@ -60,6 +60,23 @@ API.interceptors.response.use(
     const originalRequest = error.config as RetryableAxiosRequestConfig | undefined;
     const status = error.response?.status;
     const refreshToken = localStorage.getItem("refreshToken");
+    const responseData = error.response?.data as ApiErrorShape | undefined;
+
+    if (responseData && responseData.is_frozen === true) {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        try {
+          const parsedUser = JSON.parse(rawUser);
+          parsedUser.is_frozen = true;
+          localStorage.setItem("user", JSON.stringify(parsedUser));
+        } catch {
+          // ignore parsing errors
+        }
+      }
+      if (window.location.pathname !== "/reports/submit") {
+        window.location.assign("/reports/submit");
+      }
+    }
 
     if (
       status === 401 &&

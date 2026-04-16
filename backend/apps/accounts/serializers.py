@@ -15,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "role",
+            "is_frozen",
             "is_active",
             "date_joined",
         ]

@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
-from apps.members.models import Attendance, MemberProfile, SoulWinning
+from apps.members.models import MemberProfile, SoulWinning
 from .models import CellReport
 
 
@@ -35,10 +35,6 @@ class DashboardAnalyticsView(APIView):
             return qs.filter(cell__leader=user)
         return qs.none()
 
-    def _scope_attendance(self, user):
-        members = self._scope_members(user)
-        return Attendance.objects.filter(member__in=members)
-
     def _scope_soul_winning(self, user):
         members = self._scope_members(user)
         return SoulWinning.objects.filter(member__in=members)
@@ -51,7 +47,6 @@ class DashboardAnalyticsView(APIView):
 
         members_qs = self._scope_members(user)
         reports_qs = self._scope_reports(user)
-        attendance_qs = self._scope_attendance(user)
         soul_qs = self._scope_soul_winning(user)
 
         total_members = members_qs.count()
@@ -67,14 +62,14 @@ class DashboardAnalyticsView(APIView):
         souls_total = soul_qs.aggregate(total=Sum("converts"))["total"] or 0
 
         attendance_trend_qs = (
-            attendance_qs.filter(date__gte=trend_since, present=True)
-            .annotate(week=TruncWeek("date"))
+            reports_qs.filter(meeting_date__gte=trend_since)
+            .annotate(week=TruncWeek("meeting_date"))
             .values("week")
-            .annotate(count=Count("id"))
+            .annotate(count=Sum("attendance_count"))
             .order_by("week")
         )
         attendance_trend = [
-            {"date": row["week"].isoformat() if row["week"] else None, "count": row["count"]}
+            {"date": row["week"].isoformat() if row["week"] else None, "count": row["count"] or 0}
             for row in attendance_trend_qs
         ]
 

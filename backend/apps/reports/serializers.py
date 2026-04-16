@@ -1,7 +1,9 @@
 from django.db import IntegrityError, transaction
+from django.db.models import Case, DateField, F, Value, When
 from rest_framework import serializers
 
 from apps.accounts.models import User
+from apps.members.models import MemberProfile
 from .models import CellReport, ReportActivityLog, ReportComment, ReportImage
 
 
@@ -16,6 +18,15 @@ class ReportUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "first_name", "last_name", "role"]
+
+
+class ReportAttendeeSerializer(serializers.ModelSerializer):
+    user = ReportUserSerializer(read_only=True)
+    cell_name = serializers.CharField(source="cell.name", read_only=True)
+
+    class Meta:
+        model = MemberProfile
+        fields = ["id", "user", "cell", "cell_name"]
 
 
 class ReportCommentSerializer(serializers.ModelSerializer):
@@ -41,6 +52,7 @@ class CellReportSerializer(serializers.ModelSerializer):
     reviewer = ReportUserSerializer(source="reviewed_by", read_only=True)
     approver = ReportUserSerializer(source="approved_by", read_only=True)
     cell_name = serializers.CharField(source="cell.name", read_only=True)
+    attendees = ReportAttendeeSerializer(many=True, read_only=True)
     images = ReportImageSerializer(many=True, read_only=True)
     comments = ReportCommentSerializer(many=True, read_only=True)
     activity_logs = ReportActivityLogSerializer(many=True, read_only=True)
@@ -54,6 +66,7 @@ class CellReportSerializer(serializers.ModelSerializer):
             "submitted_by",
             "author",
             "meeting_date",
+            "attendees",
             "attendance_count",
             "new_members",
             "offering_amount",
@@ -83,6 +96,7 @@ class CellReportSerializer(serializers.ModelSerializer):
             "approver",
             "reviewed_at",
             "approved_at",
+            "attendance_count",
             "created_at",
             "updated_at",
             "images",
@@ -92,6 +106,7 @@ class CellReportSerializer(serializers.ModelSerializer):
 
 
 class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
+    attendees = serializers.PrimaryKeyRelatedField(queryset=MemberProfile.objects.select_related("cell"), many=True)
     images = serializers.ListField(
         child=serializers.ImageField(),
         write_only=True,
@@ -104,7 +119,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             "id",
             "cell",
             "meeting_date",
-            "attendance_count",
+            "attendees",
             "new_members",
             "offering_amount",
             "summary",
@@ -125,10 +140,25 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             unique_images.append(image)
         return unique_images
 
+    @staticmethod
+    def _update_last_attended(*, meeting_date, attendee_ids):
+        if not attendee_ids:
+            return
+        MemberProfile.objects.filter(id__in=attendee_ids).update(
+            last_attended=Case(
+                When(last_attended__isnull=True, then=Value(meeting_date)),
+                When(last_attended__lt=meeting_date, then=Value(meeting_date)),
+                default=F("last_attended"),
+                output_field=DateField(),
+            )
+        )
+
     def validate(self, attrs):
         request = self.context["request"]
         user = request.user
         cell = attrs.get("cell") or getattr(self.instance, "cell", None)
+        attendees = attrs.get("attendees")
+        meeting_date = attrs.get("meeting_date") or getattr(self.instance, "meeting_date", None)
         extracted_images = self._extract_images()
         if extracted_images and "images" not in attrs:
             attrs["images"] = extracted_images
@@ -149,12 +179,37 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
 
         if user.role == User.Role.CELL_LEADER and cell and cell.leader_id != user.id:
             raise serializers.ValidationError({"cell": "Cell leaders can only submit for their own cell."})
+        if cell is None:
+            raise serializers.ValidationError({"cell": "Cell is required."})
+
+        if attendees is None:
+            if self.instance is None:
+                raise serializers.ValidationError({"attendees": "At least one attendee is required."})
+            attendees = list(self.instance.attendees.all())
+        if len(attendees) < 1:
+            raise serializers.ValidationError({"attendees": "At least one attendee is required."})
+
+        invalid_attendees = [attendee.id for attendee in attendees if attendee.cell_id != cell.id]
+        if invalid_attendees:
+            raise serializers.ValidationError(
+                {"attendees": f"All attendees must belong to the selected cell. Invalid IDs: {invalid_attendees}"}
+            )
+
+        if cell and meeting_date:
+            duplicate_qs = CellReport.objects.filter(cell=cell, meeting_date=meeting_date)
+            if self.instance:
+                duplicate_qs = duplicate_qs.exclude(pk=self.instance.pk)
+            if duplicate_qs.exists():
+                raise serializers.ValidationError(
+                    {"non_field_errors": ["A report for this cell and meeting date already exists."]}
+                )
 
         return attrs
 
     @transaction.atomic
     def create(self, validated_data):
         images = validated_data.pop("images", [])
+        attendees = validated_data.pop("attendees", [])
         request = self.context["request"]
 
         try:
@@ -164,12 +219,21 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 {"non_field_errors": ["A report for this cell and meeting date already exists."]}
             ) from exc
 
+        if attendees:
+            report.attendees.set(attendees)
+        report.sync_attendance_count(save=True)
+        self._update_last_attended(
+            meeting_date=report.meeting_date,
+            attendee_ids=[attendee.id for attendee in attendees],
+        )
+
         ReportImage.objects.bulk_create([ReportImage(report=report, image=img) for img in images])
         return report
 
     @transaction.atomic
     def update(self, instance, validated_data):
         images = validated_data.pop("images", None)
+        attendees = validated_data.pop("attendees", None)
 
         for key, value in validated_data.items():
             setattr(instance, key, value)
@@ -180,6 +244,15 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"non_field_errors": ["A report for this cell and meeting date already exists."]}
             ) from exc
+
+        if attendees is not None:
+            instance.attendees.set(attendees)
+            attendee_ids = [attendee.id for attendee in attendees]
+        else:
+            attendee_ids = list(instance.attendees.values_list("id", flat=True))
+
+        instance.sync_attendance_count(save=True)
+        self._update_last_attended(meeting_date=instance.meeting_date, attendee_ids=attendee_ids)
 
         if images:
             ReportImage.objects.bulk_create([ReportImage(report=instance, image=img) for img in images])

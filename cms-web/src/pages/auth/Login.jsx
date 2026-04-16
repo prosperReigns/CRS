@@ -10,8 +10,9 @@ function Login() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const redirectUser = (role) => {
-    switch (role) {
+  const redirectUser = (currentUser) => {
+    if (currentUser?.is_frozen) return "/reports/submit";
+    switch (currentUser?.role) {
       case "pastor":
       case "staff":
         return "/dashboard";
@@ -35,7 +36,7 @@ function Login() {
     try {
       const data = await loginUser(form);
       login(data);
-      navigate(redirectUser(data.user.role));
+      navigate(redirectUser(data.user));
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
