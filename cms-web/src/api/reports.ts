@@ -1,7 +1,6 @@
 import API, { getErrorMessage } from "./client";
 import type { Report, ReportComment } from "../types";
-
-const extractResults = <T>(payload: T[] | { results?: T[] }): T[] => (Array.isArray(payload) ? payload : payload?.results || []);
+import { toList } from "./utils";
 
 export const createReport = async (formData: FormData): Promise<Report> => {
   try {
@@ -17,7 +16,7 @@ export const createReport = async (formData: FormData): Promise<Report> => {
 export const getMyReports = async (): Promise<Report[]> => {
   try {
     const response = await API.get<Report[] | { results: Report[] }>("reports/reports/");
-    return extractResults(response.data);
+    return toList(response.data);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to load your reports."));
   }
@@ -26,7 +25,7 @@ export const getMyReports = async (): Promise<Report[]> => {
 export const getReports = async (): Promise<Report[]> => {
   try {
     const response = await API.get<Report[] | { results: Report[] }>("reports/reports/");
-    return extractResults(response.data);
+    return toList(response.data);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to load reports."));
   }

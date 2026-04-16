@@ -1,12 +1,7 @@
-from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from apps.accounts.models import User
 from .models import BibleStudyClass, Cell, Fellowship
-
-
-AccountUser = get_user_model()
-
 
 class FellowshipSerializer(serializers.ModelSerializer):
     class Meta:

@@ -65,56 +65,59 @@ class CellReportViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def review(self, request, pk=None):
         report = self.get_object()
-        if request.user.role != User.Role.FELLOWSHIP_LEADER:
-            raise PermissionDenied("Only fellowship leaders can review reports.")
+        self._ensure_role(request.user, User.Role.FELLOWSHIP_LEADER, "Only fellowship leaders can review reports.")
         if report.cell.fellowship.leader_id != request.user.id:
             raise PermissionDenied("You can only review reports in your fellowship.")
         if report.status != CellReport.Status.PENDING:
             return Response({"detail": "Only pending reports can be reviewed."}, status=status.HTTP_400_BAD_REQUEST)
 
-        report.status = CellReport.Status.REVIEWED
-        report.reviewed_by = request.user
-        report.reviewed_at = timezone.now()
-        report.save(update_fields=["status", "reviewed_by", "reviewed_at", "updated_at"])
+        self._update_report(
+            report,
+            status=CellReport.Status.REVIEWED,
+            reviewed_by=request.user,
+            reviewed_at=timezone.now(),
+        )
 
         self._log(report, ReportActivityLog.Action.REVIEWED)
         self._notify(report, "Report Reviewed", "Your cell report has been reviewed.")
-        return Response(CellReportSerializer(report).data)
+        return Response(self._serialize_report(report))
 
     @action(detail=True, methods=["patch"])
     @transaction.atomic
     def approve(self, request, pk=None):
         report = self.get_object()
-        if request.user.role != User.Role.PASTOR:
-            raise PermissionDenied("Only pastors can approve reports.")
+        self._ensure_role(request.user, User.Role.PASTOR, "Only pastors can approve reports.")
         if report.status != CellReport.Status.REVIEWED:
             return Response({"detail": "Report must be reviewed before approval."}, status=status.HTTP_400_BAD_REQUEST)
 
-        report.status = CellReport.Status.APPROVED
-        report.approved_by = request.user
-        report.approved_at = timezone.now()
-        report.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+        self._update_report(
+            report,
+            status=CellReport.Status.APPROVED,
+            approved_by=request.user,
+            approved_at=timezone.now(),
+        )
 
         self._log(report, ReportActivityLog.Action.APPROVED)
         self._notify(report, "Report Approved", "Your cell report has been approved.")
-        return Response(CellReportSerializer(report).data)
+        return Response(self._serialize_report(report))
 
     @action(detail=True, methods=["patch"])
     @transaction.atomic
     def reject(self, request, pk=None):
         report = self.get_object()
-        if request.user.role != User.Role.PASTOR:
-            raise PermissionDenied("Only pastors can reject reports.")
+        self._ensure_role(request.user, User.Role.PASTOR, "Only pastors can reject reports.")
         if report.status != CellReport.Status.REVIEWED:
             return Response({"detail": "Report must be reviewed before rejection."}, status=status.HTTP_400_BAD_REQUEST)
 
-        report.status = CellReport.Status.REJECTED
-        report.approved_by = request.user
-        report.save(update_fields=["status", "approved_by", "updated_at"])
+        self._update_report(
+            report,
+            status=CellReport.Status.REJECTED,
+            approved_by=request.user,
+        )
 
         self._log(report, ReportActivityLog.Action.REJECTED)
         self._notify(report, "Report Rejected", "Your cell report has been rejected.")
-        return Response(CellReportSerializer(report).data)
+        return Response(self._serialize_report(report))
 
     @action(detail=True, methods=["post"])
     @transaction.atomic
@@ -144,6 +147,18 @@ class CellReportViewSet(viewsets.ModelViewSet):
 
     def _log(self, report, action, note=""):
         ReportActivityLog.objects.create(report=report, actor=self.request.user, action=action, note=note)
+
+    def _ensure_role(self, user, role, message):
+        if user.role != role:
+            raise PermissionDenied(message)
+
+    def _update_report(self, report, **changes):
+        for field, value in changes.items():
+            setattr(report, field, value)
+        report.save(update_fields=[*changes.keys(), "updated_at"])
+
+    def _serialize_report(self, report):
+        return CellReportSerializer(report, context=self.get_serializer_context()).data
 
     def _notify(self, report, title, message):
         recipient_ids = {
