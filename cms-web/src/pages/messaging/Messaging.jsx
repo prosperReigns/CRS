@@ -10,10 +10,10 @@ function Messaging() {
 
   const fetchConversations = async () => {
     try {
-      const res = await getConversations();
-      setUsers(res.data);
-    } catch {
-      setError("Failed to load conversations.");
+      const data = await getConversations();
+      setUsers(data);
+    } catch (err) {
+      setError(err.message || "Failed to load conversations.");
     } finally {
       setLoading(false);
     }

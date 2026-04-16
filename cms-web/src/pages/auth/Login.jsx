@@ -19,8 +19,11 @@ function Login() {
         return "/reports/manage";
       case "cell_leader":
         return "/reports/submit";
+      case "teacher":
+      case "member":
+        return "/messages";
       default:
-        return "/";
+        return "/login";
     }
   };
 
@@ -30,11 +33,11 @@ function Login() {
     setLoading(true);
 
     try {
-      const res = await loginUser(form);
-      login(res.data);
-      navigate(redirectUser(res.data.user.role));
+      const data = await loginUser(form);
+      login(data);
+      navigate(redirectUser(data.user.role));
     } catch (err) {
-      setError(err.response?.data?.detail || "Login failed");
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }

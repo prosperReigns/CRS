@@ -1,24 +1,73 @@
 import API from "./axios";
 
-export const createReport = (formData) =>
-  API.post("reports/reports/", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+const toList = (payload) => (Array.isArray(payload) ? payload : payload?.results || []);
 
-export const getMyReports = () =>
-  API.get("reports/reports/");
+const unwrapError = (error, fallback) => {
+  const detail = error?.response?.data?.detail || error?.response?.data?.non_field_errors?.[0];
+  throw new Error(detail || fallback);
+};
 
-export const getReports = () =>
-  API.get("reports/reports/");
+export const createReport = async (formData) => {
+  try {
+    const response = await API.post("reports/reports/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  } catch (error) {
+    unwrapError(error, "Failed to submit report.");
+  }
+};
 
-export const approveReport = (id) =>
-  API.patch(`reports/reports/${id}/approve/`);
+export const getMyReports = async () => {
+  try {
+    const response = await API.get("reports/reports/");
+    return toList(response.data);
+  } catch (error) {
+    unwrapError(error, "Failed to load your reports.");
+  }
+};
 
-export const rejectReport = (id) =>
-  API.patch(`reports/reports/${id}/reject/`);
+export const getReports = async () => {
+  try {
+    const response = await API.get("reports/reports/");
+    return toList(response.data);
+  } catch (error) {
+    unwrapError(error, "Failed to load reports.");
+  }
+};
 
-export const reviewReport = (id) =>
-  API.patch(`reports/reports/${id}/review/`);
+export const approveReport = async (id) => {
+  try {
+    const response = await API.patch(`reports/reports/${id}/approve/`);
+    return response.data;
+  } catch (error) {
+    unwrapError(error, "Failed to approve report.");
+  }
+};
 
-export const addComment = (id, data) =>
-  API.post(`reports/reports/${id}/comment/`, data);
+export const rejectReport = async (id) => {
+  try {
+    const response = await API.patch(`reports/reports/${id}/reject/`);
+    return response.data;
+  } catch (error) {
+    unwrapError(error, "Failed to reject report.");
+  }
+};
+
+export const reviewReport = async (id) => {
+  try {
+    const response = await API.patch(`reports/reports/${id}/review/`);
+    return response.data;
+  } catch (error) {
+    unwrapError(error, "Failed to review report.");
+  }
+};
+
+export const addComment = async (id, data) => {
+  try {
+    const response = await API.post(`reports/reports/${id}/comment/`, data);
+    return response.data;
+  } catch (error) {
+    unwrapError(error, "Failed to add report comment.");
+  }
+};

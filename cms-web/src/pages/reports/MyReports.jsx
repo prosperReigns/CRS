@@ -26,10 +26,10 @@ function MyReports() {
 
   const fetchReports = async () => {
     try {
-      const res = await getMyReports();
-      setReports(res.data);
+      const data = await getMyReports();
+      setReports(data);
     } catch (err) {
-      setError("Failed to load reports.");
+      setError(err.message || "Failed to load reports.");
     } finally {
       setLoading(false);
     }

@@ -21,10 +21,10 @@ function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const res = await getDashboardData();
-      setData(res.data);
+      const responseData = await getDashboardData();
+      setData(responseData);
     } catch (err) {
-      setError("Failed to load dashboard data.");
+      setError(err.message || "Failed to load dashboard data.");
     }
   };
 
@@ -43,10 +43,10 @@ function Dashboard() {
           borderRadius: "10px"
         }}>
           <h4>Total Members</h4>
-          <p>{data.member_activity_stats.total}</p>
+          <p>{data.members.total}</p>
         </div>
-        <div>Active: {data.member_activity_stats.active}</div>
-        <div>Inactive: {data.member_activity_stats.inactive}</div>
+        <div>Active: {data.members.active}</div>
+        <div>Inactive: {data.members.inactive}</div>
       </div>
 
       <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
@@ -58,7 +58,7 @@ function Dashboard() {
       <h3>Attendance Trend</h3>
       <LineChart width={600} height={300} data={data.attendance_trend}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="week" />
+        <XAxis dataKey="date" />
         <YAxis />
         <Tooltip />
         <Line type="monotone" dataKey="count" />
@@ -68,7 +68,7 @@ function Dashboard() {
       <h3>Offering Trend</h3>
       <BarChart width={600} height={300} data={data.offering_trend}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="week" />
+        <XAxis dataKey="meeting_date" />
         <YAxis />
         <Tooltip />
         <Bar dataKey="total" />

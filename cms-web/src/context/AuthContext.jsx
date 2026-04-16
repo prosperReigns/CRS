@@ -1,4 +1,6 @@
-import { createContext, useMemo, useState } from "react";
+import { createContext, useEffect, useMemo, useState } from "react";
+import { getCurrentUser } from "../api/auth";
+import { registerUnauthorizedHandler } from "../api/axios";
 
 export const AuthContext = createContext();
 
@@ -8,11 +10,11 @@ export const AuthProvider = ({ children }) => {
     return raw ? JSON.parse(raw) : null;
   });
 
-  const login = (data) => {
-    localStorage.setItem("user", JSON.stringify(data.user));
-    localStorage.setItem("accessToken", data.access);
-    localStorage.setItem("refreshToken", data.refresh);
-    setUser(data.user);
+  const login = (payload) => {
+    localStorage.setItem("user", JSON.stringify(payload.user));
+    localStorage.setItem("accessToken", payload.access);
+    localStorage.setItem("refreshToken", payload.refresh);
+    setUser(payload.user);
   };
 
   const logout = () => {
@@ -23,6 +25,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = useMemo(() => ({ user, setUser, login, logout }), [user]);
+
+  useEffect(() => {
+    registerUnauthorizedHandler(logout);
+    return () => registerUnauthorizedHandler(null);
+  }, []);
+
+  useEffect(() => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken || user) return;
+
+    getCurrentUser()
+      .then((currentUser) => {
+        localStorage.setItem("user", JSON.stringify(currentUser));
+        setUser(currentUser);
+      })
+      .catch(() => {
+        logout();
+      });
+  }, [user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

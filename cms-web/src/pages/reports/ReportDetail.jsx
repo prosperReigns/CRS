@@ -11,35 +11,56 @@ import {
 function ReportDetail({ report, refresh }) {
   const { user } = useContext(AuthContext);
   const [comment, setComment] = useState("");
+  const [error, setError] = useState("");
 
   const handleApprove = async () => {
     if (!window.confirm("Approve this report?")) return;
-    await approveReport(report.id);
-    refresh();
+    try {
+      setError("");
+      await approveReport(report.id);
+      refresh();
+    } catch (err) {
+      setError(err.message || "Failed to approve report.");
+    }
   };
 
   const handleReject = async () => {
     if (!window.confirm("Reject this report?")) return;
-    await rejectReport(report.id);
-    refresh();
+    try {
+      setError("");
+      await rejectReport(report.id);
+      refresh();
+    } catch (err) {
+      setError(err.message || "Failed to reject report.");
+    }
   };
 
   const handleReview = async () => {
-    await reviewReport(report.id);
-    refresh();
+    try {
+      setError("");
+      await reviewReport(report.id);
+      refresh();
+    } catch (err) {
+      setError(err.message || "Failed to review report.");
+    }
   };
 
   const handleComment = async () => {
     if (!comment) return;
-
-    await addComment(report.id, { comment });
-    setComment("");
-    refresh();
+    try {
+      setError("");
+      await addComment(report.id, { comment });
+      setComment("");
+      refresh();
+    } catch (err) {
+      setError(err.message || "Failed to add comment.");
+    }
   };
 
   return (
     <div>
       <h2>Report Details</h2>
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
       <p><strong>Date:</strong> {report.meeting_date}</p>
       <p><strong>Attendance:</strong> {report.attendance_count}</p>
@@ -69,7 +90,7 @@ function ReportDetail({ report, refresh }) {
       <h3>Comments</h3>
       {report.comments?.map((c) => (
         <div key={c.id} style={{ borderBottom: "1px solid #ccc" }}>
-          <p><strong>{c.author_username}</strong></p>
+          <p><strong>{c.author?.username}</strong></p>
           <p>{c.comment}</p>
         </div>
       ))}

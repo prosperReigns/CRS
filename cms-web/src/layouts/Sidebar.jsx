@@ -1,37 +1,68 @@
 import { useContext } from "react";
+import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+
+const linkStyle = {
+  display: "block",
+  padding: "8px 0",
+  color: "#fff",
+  textDecoration: "none",
+};
 
 function Sidebar() {
   const { user } = useContext(AuthContext);
 
+  if (!user) return null;
+
+  const canManageReports = ["pastor", "staff", "fellowship_leader"].includes(user.role);
+  const canViewDashboard = ["pastor", "staff"].includes(user.role);
+  const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
+  const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
+    user.role
+  );
+
   return (
-    <div style={{ width: "200px", background: "#111", color: "#fff", height: "100vh" }}>
+    <div style={{ width: "220px", background: "#111", color: "#fff", minHeight: "100vh", padding: "16px" }}>
       <h3>ChurchSys</h3>
+
+      {canViewDashboard && (
+        <Link style={linkStyle} to="/dashboard">
+          Dashboard
+        </Link>
+      )}
 
       {user.role === "cell_leader" && (
         <>
-          <Link>Submit Report</Link>
-          <Link>My Reports</Link>
+          <Link style={linkStyle} to="/reports/submit">
+            Submit Report
+          </Link>
+          <Link style={linkStyle} to="/reports/my">
+            My Reports
+          </Link>
         </>
       )}
 
-      {(user.role === "pastor" || user.role === "staff") && (
+      {canManageReports && (
+        <Link style={linkStyle} to="/reports/manage">
+          {user.role === "fellowship_leader" ? "Review Reports" : "Manage Reports"}
+        </Link>
+      )}
+
+      {canManageMembers && (
         <>
-          <Link>Dashboard</Link>
-          <Link>Manage Reports</Link>
-          <Link>Members</Link>
-          <Link>My Reports</Link>
-          <Link>Members</Link>
-          <Link>Attendance</Link>
-          <Link>Messages</Link>
+          <Link style={linkStyle} to="/members">
+            Members
+          </Link>
+          <Link style={linkStyle} to="/attendance">
+            Attendance
+          </Link>
         </>
       )}
 
-      {user.role === "fellowship_leader" && (
-        <>
-          <Link>Review Reports</Link>
-          <Link>My Reports</Link>
-        </>
+      {canMessage && (
+        <Link style={linkStyle} to="/messages">
+          Messages
+        </Link>
       )}
     </div>
   );

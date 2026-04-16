@@ -6,36 +6,54 @@ from .models import Announcement, Message, Notification
 User = get_user_model()
 
 
+class MessageUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username"]
+
+
 class MessageSerializer(serializers.ModelSerializer):
-    sender_username = serializers.CharField(source="sender.username", read_only=True)
-    recipient_username = serializers.CharField(source="recipient.username", read_only=True)
+    sender = MessageUserSerializer(read_only=True)
+    receiver = MessageUserSerializer(source="recipient", read_only=True)
 
     class Meta:
         model = Message
         fields = [
             "id",
             "sender",
-            "sender_username",
-            "recipient",
-            "recipient_username",
+            "receiver",
             "content",
             "is_read",
             "created_at",
         ]
-        read_only_fields = ["id", "sender", "sender_username", "recipient_username", "is_read", "created_at"]
+        read_only_fields = ["id", "sender", "receiver", "is_read", "created_at"]
 
 
-class MessageCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Message
-        fields = ["id", "recipient", "content"]
-        read_only_fields = ["id"]
+class MessageCreateSerializer(serializers.Serializer):
+    receiver = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    recipient = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    content = serializers.CharField()
 
-    def validate_recipient(self, value):
+    def validate(self, attrs):
         request = self.context["request"]
-        if value.id == request.user.id:
+        receiver = attrs.get("receiver")
+        recipient = attrs.get("recipient")
+
+        if receiver is None and recipient is None:
+            raise serializers.ValidationError({"receiver": "This field is required."})
+        if receiver is not None and recipient is not None and receiver.id != recipient.id:
+            raise serializers.ValidationError({"receiver": "receiver and recipient must match."})
+
+        selected_recipient = receiver or recipient
+        if selected_recipient.id == request.user.id:
             raise serializers.ValidationError("You cannot send a message to yourself.")
-        return value
+
+        attrs["recipient"] = selected_recipient
+        attrs.pop("receiver", None)
+        return attrs
+
+    def create(self, validated_data):
+        return Message.objects.create(**validated_data)
 
 
 class NotificationSerializer(serializers.ModelSerializer):

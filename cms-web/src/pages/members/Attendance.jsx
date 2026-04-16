@@ -15,10 +15,10 @@ function Attendance() {
 
   const fetchMembers = async () => {
     try {
-      const res = await getMembers();
-      setMembers(res.data);
+      const data = await getMembers();
+      setMembers(data);
     } catch (err) {
-      setError("Failed to load members.");
+      setError(err.message || "Failed to load members.");
     } finally {
       setLoading(false);
     }
@@ -42,15 +42,14 @@ function Attendance() {
       await markAttendance({
         date,
         service_type: serviceType,
-        member_ids: selected,
+        members: selected,
         present: true,
       });
 
       alert("Attendance recorded");
       setSelected([]);
     } catch (err) {
-      console.error(err);
-      alert("Error recording attendance");
+      alert(err.message || "Error recording attendance");
     }
   };
 

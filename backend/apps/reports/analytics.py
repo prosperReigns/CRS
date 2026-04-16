@@ -73,7 +73,10 @@ class DashboardAnalyticsView(APIView):
             .annotate(count=Count("id"))
             .order_by("week")
         )
-        attendance_trend = [{"week": row["week"], "count": row["count"]} for row in attendance_trend_qs]
+        attendance_trend = [
+            {"date": row["week"].isoformat() if row["week"] else None, "count": row["count"]}
+            for row in attendance_trend_qs
+        ]
 
         offering_trend_qs = (
             reports_qs.filter(meeting_date__gte=trend_since)
@@ -82,7 +85,10 @@ class DashboardAnalyticsView(APIView):
             .annotate(total=Sum("offering_amount"))
             .order_by("week")
         )
-        offering_trend = [{"week": row["week"], "total": float(row["total"] or 0)} for row in offering_trend_qs]
+        offering_trend = [
+            {"meeting_date": row["week"].isoformat() if row["week"] else None, "total": float(row["total"] or 0)}
+            for row in offering_trend_qs
+        ]
 
         top_cells_qs = (
             reports_qs.values("cell_id", "cell__name")
@@ -106,7 +112,7 @@ class DashboardAnalyticsView(APIView):
 
         return Response(
             {
-                "member_activity_stats": {
+                "members": {
                     "total": total_members,
                     "active": active_members,
                     "inactive": total_members - active_members,
