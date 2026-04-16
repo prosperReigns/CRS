@@ -1,10 +1,12 @@
 import { useState, useContext } from "react";
-import API from "../../api/axios";
+import { loginUser } from "../../api/auth";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
   const [form, setForm] = useState({ username: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -24,13 +26,17 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
-      const res = await API.post("auth/login/", form);
+      const res = await loginUser(form);
       login(res.data);
       navigate(redirectUser(res.data.user.role));
     } catch (err) {
-      alert("Login failed");
+      setError(err.response?.data?.detail || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +54,8 @@ function Login() {
       />
 
       <button type="submit">Login</button>
+      {loading && <p>Logging in...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
     </form>
   );
 }

@@ -3,6 +3,8 @@ import { getMembers } from "../../api/members";
 
 function Members() {
   const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchMembers();
@@ -13,9 +15,15 @@ function Members() {
       const res = await getMembers();
       setMembers(res.data);
     } catch (err) {
-      console.error(err);
+      setError("Failed to load members.");
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) return <p>Loading members...</p>;
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
+  if (members.length === 0) return <p>No members found.</p>;
 
   return (
     <div>
@@ -30,7 +38,7 @@ function Members() {
             padding: "10px",
           }}
         >
-          <p><strong>{m.user}</strong></p>
+          <p><strong>{m.user?.username}</strong></p>
           <p>Baptised: {m.is_baptised ? "Yes" : "No"}</p>
           <p>Foundation: {m.foundation_completed ? "Yes" : "No"}</p>
           <p>Souls Won: {m.souls_won}</p>

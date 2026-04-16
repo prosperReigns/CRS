@@ -18,9 +18,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from apps.accounts.views import LoginView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("api/auth/login/", LoginView.as_view(), name="api-login"),
+    path("api/auth/refresh/", TokenRefreshView.as_view(), name="api-token-refresh"),
     path('api/structure/', include('apps.structure.urls')),
     path('api/members/', include('apps.members.urls')),
     path('api/accounts/', include('apps.accounts.urls')),

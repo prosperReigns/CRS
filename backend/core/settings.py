@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import importlib.util
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -118,6 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -131,6 +133,11 @@ REST_FRAMEWORK = {
 
 if importlib.util.find_spec("django_filters"):
     REST_FRAMEWORK["DEFAULT_FILTER_BACKENDS"].insert(0, "django_filters.rest_framework.DjangoFilterBackend")
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

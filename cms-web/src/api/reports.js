@@ -8,6 +8,9 @@ export const createReport = (formData) =>
 export const getMyReports = () =>
   API.get("reports/reports/");
 
+export const getReports = () =>
+  API.get("reports/reports/");
+
 export const approveReport = (id) =>
   API.patch(`reports/reports/${id}/approve/`);
 

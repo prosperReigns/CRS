@@ -5,14 +5,23 @@ function Attendance() {
   const [members, setMembers] = useState([]);
   const [selected, setSelected] = useState([]);
   const [date, setDate] = useState("");
+  const [serviceType, setServiceType] = useState("sunday");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchMembers();
   }, []);
 
   const fetchMembers = async () => {
-    const res = await getMembers();
-    setMembers(res.data);
+    try {
+      const res = await getMembers();
+      setMembers(res.data);
+    } catch (err) {
+      setError("Failed to load members.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleMember = (id) => {
@@ -32,8 +41,9 @@ function Attendance() {
     try {
       await markAttendance({
         date,
-        service_type: "sunday",
-        members: selected,
+        service_type: serviceType,
+        member_ids: selected,
+        present: true,
       });
 
       alert("Attendance recorded");
@@ -47,8 +57,15 @@ function Attendance() {
   return (
     <div>
       <h2>Mark Attendance</h2>
+      {loading && <p>Loading members...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
       <input type="date" onChange={(e) => setDate(e.target.value)} />
+      <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}>
+        <option value="sunday">Sunday Service</option>
+        <option value="midweek">Midweek Service</option>
+        <option value="special">Special Service</option>
+      </select>
 
       {members.map((m) => (
         <div key={m.id}>
@@ -58,7 +75,7 @@ function Attendance() {
               checked={selected.includes(m.id)}
               onChange={() => toggleMember(m.id)}
             />
-            {m.user}
+            {m.user?.username}
           </label>
         </div>
       ))}

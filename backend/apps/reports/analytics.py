@@ -106,12 +106,12 @@ class DashboardAnalyticsView(APIView):
 
         return Response(
             {
-                "members": {
+                "member_activity_stats": {
                     "total": total_members,
                     "active": active_members,
                     "inactive": total_members - active_members,
                 },
-                "reports": {
+                "report_stats": {
                     "total": reports_summary["total"] or 0,
                     "approved": reports_summary["approved"] or 0,
                     "rejected": reports_summary["rejected"] or 0,

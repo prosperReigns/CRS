@@ -13,6 +13,7 @@ import {
 
 function Dashboard() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -23,10 +24,11 @@ function Dashboard() {
       const res = await getDashboardData();
       setData(res.data);
     } catch (err) {
-      console.error(err);
+      setError("Failed to load dashboard data.");
     }
   };
 
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
   if (!data) return <p>Loading...</p>;
 
   return (
@@ -41,15 +43,14 @@ function Dashboard() {
           borderRadius: "10px"
         }}>
           <h4>Total Members</h4>
-          <p>{data.members.total}</p>
+          <p>{data.member_activity_stats.total}</p>
         </div>
-        <div>Active: {data.members.active}</div>
-        <div>Inactive: {data.members.inactive}</div>
+        <div>Active: {data.member_activity_stats.active}</div>
+        <div>Inactive: {data.member_activity_stats.inactive}</div>
       </div>
 
       <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-        <div>Attendance (Last Week): {data.attendance_last_week}</div>
-        <div>Offering: ₦{data.offering}</div>
+        <div>Offering: ₦{data.offering_total}</div>
         <div>Souls Won: {data.souls_won}</div>
       </div>
 
@@ -57,7 +58,7 @@ function Dashboard() {
       <h3>Attendance Trend</h3>
       <LineChart width={600} height={300} data={data.attendance_trend}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
+        <XAxis dataKey="week" />
         <YAxis />
         <Tooltip />
         <Line type="monotone" dataKey="count" />
@@ -67,7 +68,7 @@ function Dashboard() {
       <h3>Offering Trend</h3>
       <BarChart width={600} height={300} data={data.offering_trend}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="meeting_date" />
+        <XAxis dataKey="week" />
         <YAxis />
         <Tooltip />
         <Bar dataKey="total" />
@@ -75,9 +76,9 @@ function Dashboard() {
 
       {/* 🧾 Reports Summary */}
       <h3>Reports</h3>
-      <p>Total: {data.reports.total}</p>
-      <p>Approved: {data.reports.approved}</p>
-      <p>Rejected: {data.reports.rejected}</p>
+      <p>Total: {data.report_stats.total}</p>
+      <p>Approved: {data.report_stats.approved}</p>
+      <p>Rejected: {data.report_stats.rejected}</p>
     </div>
   );
 }
