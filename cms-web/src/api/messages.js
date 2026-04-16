@@ -1,7 +1,7 @@
 import API from "./axios";
 
 const toList = (payload) => (Array.isArray(payload) ? payload : payload?.results || []);
-const resolveReceiverId = (data) => data.receiver ?? data.recipient;
+const resolveReceiver = (data) => data.receiver ?? data.recipient;
 
 const unwrapError = (error, fallback) => {
   const detail = error?.response?.data?.detail;
@@ -30,7 +30,7 @@ export const sendMessage = async (data) => {
   try {
     const payload = {
       content: data.content,
-      receiver: resolveReceiverId(data),
+      receiver: resolveReceiver(data),
     };
     const response = await API.post("communication/messages/", payload);
     return response.data;

@@ -1,6 +1,6 @@
 import API from "./axios";
 
-const toList = (payload) => (Array.isArray(payload) ? payload : payload?.results || []);
+const extractResults = (payload) => (Array.isArray(payload) ? payload : payload?.results || []);
 
 const unwrapError = (error, fallback) => {
   const detail = error?.response?.data?.detail || error?.response?.data?.non_field_errors?.[0];
@@ -21,7 +21,7 @@ export const createReport = async (formData) => {
 export const getMyReports = async () => {
   try {
     const response = await API.get("reports/reports/");
-    return toList(response.data);
+    return extractResults(response.data);
   } catch (error) {
     unwrapError(error, "Failed to load your reports.");
   }
@@ -30,7 +30,7 @@ export const getMyReports = async () => {
 export const getReports = async () => {
   try {
     const response = await API.get("reports/reports/");
-    return toList(response.data);
+    return extractResults(response.data);
   } catch (error) {
     unwrapError(error, "Failed to load reports.");
   }

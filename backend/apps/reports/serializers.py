@@ -114,10 +114,16 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
 
     def _extract_images(self):
         request = self.context["request"]
-        images = []
-        images.extend(request.FILES.getlist("images"))
-        images.extend(request.FILES.getlist("images[]"))
-        return images
+        images = [*request.FILES.getlist("images"), *request.FILES.getlist("images[]")]
+        unique_images = []
+        seen = set()
+        for image in images:
+            key = (image.name, image.size)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_images.append(image)
+        return unique_images
 
     def validate(self, attrs):
         request = self.context["request"]
