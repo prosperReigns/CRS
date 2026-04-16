@@ -84,11 +84,22 @@ export interface Attendance {
   member: number;
   member_name: string;
   date: string;
+  service: number | null;
+  service_name?: string | null;
   service_type: "sunday" | "midweek" | "special";
   present: boolean;
   recorded_by?: number | null;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface ChurchService {
+  id: number;
+  name: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string | null;
+  is_active: boolean;
 }
 
 export interface Message {
@@ -115,6 +126,9 @@ export interface AnalyticsResponse {
   offering_total: number;
   souls_won: number;
   attendance_trend: Array<{ date: string; count: number }>;
+  service_attendance?: Array<{ service_id: number; name: string; attendance: number }>;
+  services?: Array<{ service_id: number; name: string; attendance: number }>;
+  daily_total_attendance?: Array<{ date: string; attendance: number }>;
   offering_trend: Array<{ meeting_date: string; total: number }>;
   top_cells: Array<{
     cell_id: number;
@@ -127,14 +141,15 @@ export interface AnalyticsResponse {
 
 export interface AttendanceBulkRequest {
   date: string;
-  service_type: "sunday" | "midweek" | "special";
+  service_id: number;
   members: number[];
   present?: boolean;
 }
 
 export interface AttendanceBulkResponse {
   date: string;
-  service_type: "sunday" | "midweek" | "special";
+  service_id: number;
+  service_name?: string;
   requested: number;
   created: number;
   duplicates: number;

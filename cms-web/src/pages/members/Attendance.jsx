@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getMembers, markAttendance } from "../../api/members";
+import { getMembers, getServices, markAttendance } from "../../api/members";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
@@ -8,21 +8,26 @@ function Attendance() {
   const [members, setMembers] = useState([]);
   const [selected, setSelected] = useState([]);
   const [date, setDate] = useState("");
-  const [serviceType, setServiceType] = useState("sunday");
+  const [services, setServices] = useState([]);
+  const [serviceId, setServiceId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    fetchMembers();
+    fetchInitialData();
   }, []);
 
-  const fetchMembers = async () => {
+  const fetchInitialData = async () => {
     try {
-      const data = await getMembers();
-      setMembers(data);
+      const [memberData, serviceData] = await Promise.all([getMembers(), getServices()]);
+      setMembers(memberData);
+      setServices(serviceData);
+      if (serviceData.length > 0) {
+        setServiceId(String(serviceData[0].id));
+      }
     } catch (err) {
-      setError(err.message || "Failed to load members.");
+      setError(err.message || "Failed to load attendance data.");
     } finally {
       setLoading(false);
     }
@@ -43,11 +48,15 @@ function Attendance() {
       setError("Select a date.");
       return;
     }
+    if (!serviceId) {
+      setError("Select a service.");
+      return;
+    }
 
     try {
       await markAttendance({
         date,
-        service_type: serviceType,
+        service_id: Number(serviceId),
         members: selected,
         present: true,
       });
@@ -66,10 +75,12 @@ function Attendance() {
       {success && <p style={{ color: "green" }}>{success}</p>}
 
       <input type="date" onChange={(e) => setDate(e.target.value)} />
-      <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}>
-        <option value="sunday">Sunday Service</option>
-        <option value="midweek">Midweek Service</option>
-        <option value="special">Special Service</option>
+      <select value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+        {services.map((service) => (
+          <option key={service.id} value={service.id}>
+            {service.name} ({service.day_of_week})
+          </option>
+        ))}
       </select>
 
       {!loading && members.length === 0 && <EmptyState label="No members available for attendance." />}
@@ -86,7 +97,11 @@ function Attendance() {
         </div>
       ))}
 
-      <button type="button" onClick={handleSubmit} disabled={loading || members.length === 0 || selected.length === 0}>
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={loading || members.length === 0 || selected.length === 0 || !serviceId}
+      >
         Submit Attendance
       </button>
     </div>

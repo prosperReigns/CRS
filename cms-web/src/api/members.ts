@@ -1,5 +1,5 @@
 import API, { getErrorMessage } from "./client";
-import type { AttendanceBulkRequest, AttendanceBulkResponse, Member } from "../types";
+import type { AttendanceBulkRequest, AttendanceBulkResponse, ChurchService, Member } from "../types";
 import { toList } from "./utils";
 
 export const getMembers = async (): Promise<Member[]> => {
@@ -15,12 +15,12 @@ export const markAttendance = async (data: AttendanceBulkRequest): Promise<Atten
   try {
     const payload: {
       date: string;
-      service_type: AttendanceBulkRequest["service_type"];
+      service_id: number;
       members: number[];
       present?: boolean;
     } = {
       date: data.date,
-      service_type: data.service_type,
+      service_id: data.service_id,
       members: data.members || [],
     };
     if (typeof data.present === "boolean") {
@@ -30,5 +30,14 @@ export const markAttendance = async (data: AttendanceBulkRequest): Promise<Atten
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to mark attendance."));
+  }
+};
+
+export const getServices = async (): Promise<ChurchService[]> => {
+  try {
+    const response = await API.get<ChurchService[]>("services/");
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch services."));
   }
 };
