@@ -29,24 +29,22 @@ function Members() {
   if (members.length === 0) return <EmptyState label="No members found." />;
 
   return (
-    <div>
-      <h2>Members</h2>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-slate-900">Members</h2>
 
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {members.map((m) => (
         <div
           key={m.id}
-          style={{
-            border: "1px solid #ccc",
-            margin: "10px",
-            padding: "10px",
-          }}
+          className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
         >
-          <p><strong>{m.user?.username}</strong></p>
-          <p>Baptised: {m.is_baptised ? "Yes" : "No"}</p>
-          <p>Foundation: {m.foundation_completed ? "Yes" : "No"}</p>
-          <p>Souls Won: {m.souls_won}</p>
+          <p className="text-lg font-semibold text-slate-900">{m.user?.username}</p>
+          <p className="text-sm text-slate-600">Baptised: {m.is_baptised ? "Yes" : "No"}</p>
+          <p className="text-sm text-slate-600">Foundation: {m.foundation_completed ? "Yes" : "No"}</p>
+          <p className="text-sm text-slate-600">Souls Won: {m.souls_won}</p>
         </div>
       ))}
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   CartesianGrid,
   BarChart,
   Bar,
+  ResponsiveContainer,
 } from "recharts";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
@@ -35,82 +36,120 @@ function Dashboard() {
   if (!data) return <LoadingState />;
 
   return (
-    <div>
-      <h2>Dashboard</h2>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
 
-      {/* 🔢 SUMMARY */}
-      <div style={{ display: "flex", gap: "20px" }}>
-        <div style={{
-          padding: "20px",
-          border: "1px solid #ccc",
-          borderRadius: "10px"
-        }}>
-          <h4>Total Members</h4>
-          <p>{data.members.total}</p>
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h4 className="text-sm font-medium text-slate-500">Total Members</h4>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{data.members.total}</p>
         </div>
-        <div>Active: {data.members.active}</div>
-        <div>Inactive: {data.members.inactive}</div>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h4 className="text-sm font-medium text-slate-500">Active Members</h4>
+          <p className="mt-2 text-3xl font-bold text-emerald-600">{data.members.active}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h4 className="text-sm font-medium text-slate-500">Inactive Members</h4>
+          <p className="mt-2 text-3xl font-bold text-amber-600">{data.members.inactive}</p>
+        </div>
       </div>
 
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-        <div>Offering: ₦{data.offering_total}</div>
-        <div>Souls Won: {data.souls_won}</div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h4 className="text-sm font-medium text-slate-500">Total Offering</h4>
+          <p className="mt-2 text-3xl font-bold text-brand-600">₦{data.offering_total}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h4 className="text-sm font-medium text-slate-500">Souls Won</h4>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{data.souls_won}</p>
+        </div>
       </div>
 
-      {/* 📈 Attendance Chart */}
-      <h3>Attendance Trend</h3>
-      <LineChart width={600} height={300} data={data.attendance_trend}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis />
-        <Tooltip />
-        <Line type="monotone" dataKey="count" />
-      </LineChart>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-lg font-semibold text-slate-900">Attendance Trend</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.attendance_trend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="count" stroke="#3b82f6" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
 
-      <h3>Attendance by Service</h3>
-      <BarChart width={600} height={300} data={data.services || []}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Bar dataKey="attendance" />
-      </BarChart>
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-lg font-semibold text-slate-900">Attendance by Service</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.services || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="attendance" fill="#2563eb" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
 
-      <h3>Daily Total Attendance</h3>
-      <LineChart width={600} height={300} data={data.daily_total_attendance || []}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis />
-        <Tooltip />
-        <Line type="monotone" dataKey="attendance" />
-      </LineChart>
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-lg font-semibold text-slate-900">Daily Total Attendance</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.daily_total_attendance || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="attendance" stroke="#0ea5e9" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
 
-      {/* 💰 Offering Chart */}
-      <h3>Offering Trend</h3>
-      <BarChart width={600} height={300} data={data.offering_trend}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="meeting_date" />
-        <YAxis />
-        <Tooltip />
-        <Bar dataKey="total" />
-      </BarChart>
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-lg font-semibold text-slate-900">Offering Trend</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.offering_trend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="meeting_date" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="total" fill="#14b8a6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      </div>
 
-      {/* 🧾 Reports Summary */}
-      <h3>Reports</h3>
-      <p>Total: {data.report_stats.total}</p>
-      <p>Approved: {data.report_stats.approved}</p>
-      <p>Rejected: {data.report_stats.rejected}</p>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-lg font-semibold text-slate-900">Reports</h3>
+          <p className="text-slate-700">Total: {data.report_stats.total}</p>
+          <p className="text-emerald-700">Approved: {data.report_stats.approved}</p>
+          <p className="text-red-700">Rejected: {data.report_stats.rejected}</p>
+        </section>
 
-      <h3>Top Cells</h3>
-      {data.top_cells?.length ? (
-        data.top_cells.map((cell) => (
-          <p key={cell.cell_id}>
-            {cell.cell_name} - Attendance: {cell.total_attendance}, Offering: ₦{cell.total_offering}
-          </p>
-        ))
-      ) : (
-        <EmptyState label="No top cell data yet." />
-      )}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-lg font-semibold text-slate-900">Top Cells</h3>
+          {data.top_cells?.length ? (
+            <div className="space-y-2">
+              {data.top_cells.map((cell) => (
+                <p key={cell.cell_id} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                  {cell.cell_name} - Attendance: {cell.total_attendance}, Offering: ₦{cell.total_offering}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <EmptyState label="No top cell data yet." />
+          )}
+        </section>
+      </div>
     </div>
   );
 }

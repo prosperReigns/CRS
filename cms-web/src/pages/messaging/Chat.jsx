@@ -51,28 +51,36 @@ function Chat({ user }) {
   };
 
   return (
-    <div>
-      <h3>Chat with {user.username}</h3>
+    <div className="space-y-3">
+      <h3 className="text-xl font-bold text-slate-900">Chat with {user.username}</h3>
       <ErrorState error={error} />
 
-      <div style={{ height: "400px", overflowY: "scroll" }}>
+      <div className="h-[400px] space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
         {loading && <LoadingState label="Loading chat..." />}
         {!loading && messages.length === 0 && <EmptyState label="No messages in this conversation yet." />}
         {!loading &&
           messages.map((m) => (
-            <div key={m.id}>
+            <div key={m.id} className="rounded-md border border-slate-200 bg-white p-2 text-sm text-slate-700">
               <strong>{m.sender?.username}</strong>: {m.content}
             </div>
           ))}
       </div>
 
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Type message..."
-      />
+      <div className="flex gap-2">
+        <input
+          value={text}
+          className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type message..."
+        />
 
-      <button onClick={handleSend}>Send</button>
+        <button
+          onClick={handleSend}
+          className="rounded-lg bg-brand-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700"
+        >
+          Send
+        </button>
+      </div>
     </div>
   );
 }

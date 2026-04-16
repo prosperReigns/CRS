@@ -31,10 +31,9 @@ function ManageReports() {
   };
 
   return (
-    <div style={{ display: "flex" }}>
-      {/* LEFT: LIST */}
-      <div style={{ width: "40%" }}>
-        <h2>Reports</h2>
+    <div className="grid gap-4 lg:grid-cols-5">
+      <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
+        <h2 className="text-2xl font-bold text-slate-900">Reports</h2>
         {loading && <LoadingState label="Loading reports..." />}
         <ErrorState error={error} />
         {!loading && !error && reports.length === 0 && <EmptyState label="No reports found." />}
@@ -43,22 +42,16 @@ function ManageReports() {
           <div
             key={r.id}
             onClick={() => setSelectedReport(r)}
-            style={{
-              border: "1px solid #ccc",
-              margin: "10px",
-              padding: "10px",
-              cursor: "pointer",
-            }}
+            className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50 p-3 transition hover:border-brand-300 hover:bg-brand-50"
           >
-            <p>{r.cell_name || r.cell}</p>
-            <p>{r.meeting_date}</p>
-            <p>Status: {r.status}</p>
+            <p className="font-semibold text-slate-800">{r.cell_name || r.cell}</p>
+            <p className="text-sm text-slate-600">{r.meeting_date}</p>
+            <p className="text-sm capitalize text-slate-600">Status: {r.status}</p>
           </div>
         ))}
       </div>
 
-      {/* RIGHT: DETAILS */}
-      <div style={{ width: "60%" }}>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
         {selectedReport ? <ReportDetail report={selectedReport} refresh={fetchReports} /> : <EmptyState label="Select a report" />}
       </div>
     </div>

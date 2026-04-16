@@ -1,13 +1,6 @@
 import { useContext } from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-
-const linkStyle = {
-  display: "block",
-  padding: "8px 0",
-  color: "#fff",
-  textDecoration: "none",
-};
 
 function Sidebar() {
   const { user } = useContext(AuthContext);
@@ -21,53 +14,57 @@ function Sidebar() {
     user.role
   );
   const isFrozen = Boolean(user.is_frozen);
+  const baseLinkClass =
+    "block rounded-lg px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700 hover:text-white";
+  const activeLinkClass = "bg-brand-600 text-white";
+  const navClassName = ({ isActive }) => `${baseLinkClass} ${isActive ? activeLinkClass : ""}`;
 
   return (
-    <div style={{ width: "220px", background: "#111", color: "#fff", minHeight: "100vh", padding: "16px" }}>
-      <h3>ChurchSys</h3>
+    <aside className="w-64 bg-slate-900 p-4 text-white">
+      <h3 className="mb-5 text-lg font-bold tracking-wide">ChurchSys</h3>
 
       {canViewDashboard && !isFrozen && (
-        <Link style={linkStyle} to="/dashboard">
+        <NavLink className={navClassName} to="/dashboard">
           Dashboard
-        </Link>
+        </NavLink>
       )}
 
       {user.role === "cell_leader" && (
-        <>
-          <Link style={linkStyle} to="/reports/submit">
+        <div className="space-y-1">
+          <NavLink className={navClassName} to="/reports/submit">
             Submit Report
-          </Link>
+          </NavLink>
           {!isFrozen && (
-            <Link style={linkStyle} to="/reports/my">
+            <NavLink className={navClassName} to="/reports/my">
               My Reports
-            </Link>
+            </NavLink>
           )}
-        </>
+        </div>
       )}
 
       {canManageReports && !isFrozen && (
-        <Link style={linkStyle} to="/reports/manage">
+        <NavLink className={navClassName} to="/reports/manage">
           {user.role === "fellowship_leader" ? "Review Reports" : "Manage Reports"}
-        </Link>
+        </NavLink>
       )}
 
       {canManageMembers && !isFrozen && (
-        <>
-          <Link style={linkStyle} to="/members">
+        <div className="space-y-1">
+          <NavLink className={navClassName} to="/members">
             Members
-          </Link>
-          <Link style={linkStyle} to="/attendance">
+          </NavLink>
+          <NavLink className={navClassName} to="/attendance">
             Attendance
-          </Link>
-        </>
+          </NavLink>
+        </div>
       )}
 
       {canMessage && !isFrozen && (
-        <Link style={linkStyle} to="/messages">
+        <NavLink className={navClassName} to="/messages">
           Messages
-        </Link>
+        </NavLink>
       )}
-    </div>
+    </aside>
   );
 }
 

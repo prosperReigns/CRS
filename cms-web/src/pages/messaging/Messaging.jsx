@@ -27,10 +27,9 @@ function Messaging() {
   }, []);
 
   return (
-    <div style={{ display: "flex" }}>
-      {/* LEFT: USERS */}
-      <div style={{ width: "30%", borderRight: "1px solid #ccc" }}>
-        <h3>Conversations</h3>
+    <div className="grid gap-4 lg:grid-cols-10">
+      <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
+        <h3 className="text-xl font-bold text-slate-900">Conversations</h3>
         {loading && <LoadingState label="Loading conversations..." />}
         <ErrorState error={error} />
         {!loading && !error && users.length === 0 && <EmptyState label="No conversations yet." />}
@@ -39,15 +38,14 @@ function Messaging() {
           <div
             key={u.partner.id}
             onClick={() => setActiveUser(u.partner)}
-            style={{ padding: "10px", cursor: "pointer" }}
+            className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 transition hover:border-brand-300 hover:bg-brand-50"
           >
             {u.partner?.username} ({u.partner?.role})
           </div>
         ))}
       </div>
 
-      {/* RIGHT: CHAT */}
-      <div style={{ width: "70%" }}>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-7">
         {activeUser ? (
           <Chat user={activeUser} />
         ) : (

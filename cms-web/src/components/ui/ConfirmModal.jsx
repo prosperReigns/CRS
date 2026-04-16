@@ -4,22 +4,14 @@ function ConfirmModal({ open, title, message, onConfirm, onCancel, confirmText =
   if (!open) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.4)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 20,
-      }}
-    >
-      <div style={{ background: "#fff", padding: "20px", borderRadius: "8px", minWidth: "320px" }}>
-        <h3>{title}</h3>
-        <p>{message}</p>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-          <Button onClick={onCancel}>Cancel</Button>
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4">
+      <div className="min-w-[320px] rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+        <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+        <p className="mt-2 text-sm text-slate-600">{message}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button onClick={onCancel} className="bg-slate-200 text-slate-700 hover:bg-slate-300">
+            Cancel
+          </Button>
           <Button onClick={onConfirm}>{confirmText}</Button>
         </div>
       </div>
