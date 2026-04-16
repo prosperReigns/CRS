@@ -1,10 +1,10 @@
 export interface User {
   id: number;
   username: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
   role: "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";
 }
 
@@ -12,7 +12,7 @@ export interface MemberProfile {
   id: number;
   user: User;
   cell: number | null;
-  cell_name: string;
+  cell_name: string | null;
   is_baptised: boolean;
   foundation_completed: boolean;
   is_partner: boolean;

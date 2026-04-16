@@ -62,9 +62,9 @@ function SubmitReport() {
       {error && <p style={{ color: "red" }}>{error}</p>}
       {success && <p style={{ color: "green" }}>{success}</p>}
 
-      {/* image preview */}
+      {/* image files */}
       {images.map((img, i) => (
-        <img key={i} src={URL.createObjectURL(img)} width="100" />
+        <p key={i}>{img.name}</p>
       ))}
 
       <input
