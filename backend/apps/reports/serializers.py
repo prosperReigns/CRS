@@ -101,6 +101,8 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
 
         if self.instance and self.instance.status == CellReport.Status.APPROVED:
             raise serializers.ValidationError("Approved reports cannot be edited.")
+        if self.instance and self.instance.status in {CellReport.Status.REVIEWED, CellReport.Status.REJECTED}:
+            raise serializers.ValidationError("Only pending reports can be edited.")
 
         if self.instance is None:
             images = attrs.get("images") or []
