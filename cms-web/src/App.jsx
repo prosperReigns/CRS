@@ -11,6 +11,17 @@ import Members from "./pages/members/Members";
 import Attendance from "./pages/members/Attendance";
 import Messaging from "./pages/messaging/Messaging";
 
+const memberManagerRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
+const messagingRoles = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
+
+function ProtectedLayoutRoute({ allowedRoles, children }) {
+  return (
+    <ProtectedRoute allowedRoles={allowedRoles}>
+      <MainLayout>{children}</MainLayout>
+    </ProtectedRoute>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -18,112 +29,66 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* DASHBOARD */}
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["pastor", "staff"]}>
-              <MainLayout>
-                <Dashboard />
-              </MainLayout>
-            </ProtectedRoute>
+            <ProtectedLayoutRoute allowedRoles={["pastor", "staff"]}>
+              <Dashboard />
+            </ProtectedLayoutRoute>
           }
         />
 
-        {/* SUBMIT REPORT */}
         <Route
           path="/reports/submit"
           element={
-            <ProtectedRoute allowedRoles={["cell_leader"]}>
-              <MainLayout>
-                <SubmitReport />
-              </MainLayout>
-            </ProtectedRoute>
+            <ProtectedLayoutRoute allowedRoles={["cell_leader"]}>
+              <SubmitReport />
+            </ProtectedLayoutRoute>
           }
         />
 
-        {/* MANAGE REPORTS */}
         <Route
           path="/reports/manage"
           element={
-            <ProtectedRoute
-              allowedRoles={["pastor", "staff", "fellowship_leader"]}
-            >
-              <MainLayout>
-                <ManageReports />
-              </MainLayout>
-            </ProtectedRoute>
+            <ProtectedLayoutRoute allowedRoles={["pastor", "staff", "fellowship_leader"]}>
+              <ManageReports />
+            </ProtectedLayoutRoute>
           }
         />
 
-        {/* VIEW REPORTS */}
         <Route
           path="/reports/my"
           element={
-            <ProtectedRoute allowedRoles={["cell_leader"]}>
-              <MainLayout>
-                <MyReports />
-              </MainLayout>
-            </ProtectedRoute>
+            <ProtectedLayoutRoute allowedRoles={["cell_leader"]}>
+              <MyReports />
+            </ProtectedLayoutRoute>
           }
         />
 
-        {/* VIEW MEMBERS */}
         <Route
           path="/members"
           element={
-            <ProtectedRoute
-              allowedRoles={[
-                "pastor",
-                "staff",
-                "fellowship_leader",
-                "cell_leader",
-              ]}
-            >
-              <MainLayout>
-                <Members />
-              </MainLayout>
-            </ProtectedRoute>
+            <ProtectedLayoutRoute allowedRoles={memberManagerRoles}>
+              <Members />
+            </ProtectedLayoutRoute>
           }
         />
 
-        {/* ATTENDANCE */}
         <Route
           path="/attendance"
           element={
-            <ProtectedRoute
-              allowedRoles={[
-                "pastor",
-                "staff",
-                "fellowship_leader",
-                "cell_leader",
-              ]}
-            >
-              <MainLayout>
-                <Attendance />
-              </MainLayout>
-            </ProtectedRoute>
+            <ProtectedLayoutRoute allowedRoles={memberManagerRoles}>
+              <Attendance />
+            </ProtectedLayoutRoute>
           }
         />
 
-        {/* MESSAGING */}
         <Route
           path="/messages"
           element={
-            <ProtectedRoute
-              allowedRoles={[
-                "pastor",
-                "staff",
-                "fellowship_leader",
-                "cell_leader",
-                "teacher",
-                "member",
-              ]}
-            >
-              <MainLayout>
-                <Messaging />
-              </MainLayout>
-            </ProtectedRoute>
+            <ProtectedLayoutRoute allowedRoles={messagingRoles}>
+              <Messaging />
+            </ProtectedLayoutRoute>
           }
         />
         <Route path="*" element={<Navigate to="/login" replace />} />

@@ -23,6 +23,11 @@ def scoped_member_profiles(user):
     return qs.filter(user=user)
 
 
+def ensure_member_in_scope(user, member_id, message):
+    if not scoped_member_profiles(user).filter(id=member_id).exists():
+        raise PermissionDenied(message)
+
+
 class MemberProfileViewSet(viewsets.ModelViewSet):
     serializer_class = MemberProfileSerializer
     permission_classes = [MemberProfilePermission]
@@ -65,9 +70,11 @@ class SoulWinningViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         member = serializer.validated_data["member"]
-        allowed_ids = scoped_member_profiles(self.request.user).values_list("id", flat=True)
-        if member.id not in allowed_ids:
-            raise PermissionDenied("You cannot record soul-winning for this member.")
+        ensure_member_in_scope(
+            self.request.user,
+            member.id,
+            "You cannot record soul-winning for this member.",
+        )
         serializer.save(recorded_by=self.request.user)
 
 
@@ -81,9 +88,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         member = serializer.validated_data["member"]
-        allowed_ids = set(scoped_member_profiles(self.request.user).values_list("id", flat=True))
-        if member.id not in allowed_ids:
-            raise PermissionDenied("You cannot record attendance for this member.")
+        ensure_member_in_scope(
+            self.request.user,
+            member.id,
+            "You cannot record attendance for this member.",
+        )
         serializer.save(recorded_by=self.request.user)
 
     @action(detail=False, methods=["post"], url_path="bulk-mark")

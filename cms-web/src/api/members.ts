@@ -1,7 +1,6 @@
 import API, { getErrorMessage } from "./client";
 import type { AttendanceBulkRequest, AttendanceBulkResponse, Member } from "../types";
-
-const toList = <T>(payload: T[] | { results?: T[] }): T[] => (Array.isArray(payload) ? payload : payload?.results || []);
+import { toList } from "./utils";
 
 export const getMembers = async (): Promise<Member[]> => {
   try {

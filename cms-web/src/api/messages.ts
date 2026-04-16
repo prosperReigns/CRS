@@ -1,7 +1,6 @@
 import API, { getErrorMessage } from "./client";
 import type { Conversation, Message } from "../types";
-
-const toList = <T>(payload: T[] | { results?: T[] }): T[] => (Array.isArray(payload) ? payload : payload?.results || []);
+import { toList } from "./utils";
 
 export interface SendMessagePayload {
   recipient: number;
