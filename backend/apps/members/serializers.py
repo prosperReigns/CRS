@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from rest_framework import serializers
 
-from .models import Attendance, MemberProfile, SoulWinning
+from .models import Attendance, ChurchService, MemberProfile, SoulWinning
 
 User = get_user_model()
 
@@ -65,6 +65,7 @@ class SoulWinningSerializer(serializers.ModelSerializer):
 
 class AttendanceSerializer(serializers.ModelSerializer):
     member_name = serializers.CharField(source="member.user.username", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True)
 
     class Meta:
         model = Attendance
@@ -73,20 +74,49 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "member",
             "member_name",
             "date",
+            "service",
+            "service_name",
             "service_type",
             "present",
             "recorded_by",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "recorded_by", "created_at", "updated_at", "member_name"]
+        read_only_fields = ["id", "recorded_by", "created_at", "updated_at", "member_name", "service_name"]
+
+    def _is_legacy_record_without_service(self, attrs):
+        return bool(
+            self.instance
+            and getattr(self.instance, "service_id", None) is None
+            and "service" not in attrs
+        )
+
+    def validate(self, attrs):
+        service = attrs.get("service") or getattr(self.instance, "service", None)
+        attendance_date = attrs.get("date") or getattr(self.instance, "date", None)
+        if not service:
+            if self._is_legacy_record_without_service(attrs):
+                return attrs
+            raise serializers.ValidationError({"service": "Service is required."})
+        if attendance_date and service.day_of_week.lower() != attendance_date.strftime("%A").lower():
+            raise serializers.ValidationError(
+                {"service": f"Selected service runs on {service.day_of_week}, but date is {attendance_date.strftime('%A')}."}
+            )
+        return attrs
+
+
+class ChurchServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChurchService
+        fields = ["id", "name", "day_of_week", "start_time", "end_time", "is_active"]
+        read_only_fields = fields
 
 
 class BulkAttendanceSerializer(serializers.Serializer):
     member_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False, required=False)
     members = serializers.ListField(child=serializers.IntegerField(), allow_empty=False, required=False, write_only=True)
     date = serializers.DateField()
-    service_type = serializers.ChoiceField(choices=Attendance.ServiceType.choices)
+    service_id = serializers.PrimaryKeyRelatedField(queryset=ChurchService.objects.filter(is_active=True), source="service")
     present = serializers.BooleanField(default=True)
 
     def validate(self, attrs):
@@ -95,4 +125,12 @@ class BulkAttendanceSerializer(serializers.Serializer):
         if not member_ids:
             raise serializers.ValidationError({"member_ids": "At least one member is required."})
         attrs["member_ids"] = member_ids
+        service = attrs.get("service")
+        attendance_date = attrs.get("date")
+        if service and attendance_date:
+            requested_day = attendance_date.strftime("%A").lower()
+            if service.day_of_week.lower() != requested_day:
+                raise serializers.ValidationError(
+                    {"service_id": f"Selected service runs on {service.day_of_week}, but date is {attendance_date.strftime('%A')}."}
+                )
         return attrs

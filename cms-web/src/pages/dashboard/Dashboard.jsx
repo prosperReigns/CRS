@@ -67,6 +67,24 @@ function Dashboard() {
         <Line type="monotone" dataKey="count" />
       </LineChart>
 
+      <h3>Attendance by Service</h3>
+      <BarChart width={600} height={300} data={data.services || []}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="attendance" />
+      </BarChart>
+
+      <h3>Daily Total Attendance</h3>
+      <LineChart width={600} height={300} data={data.daily_total_attendance || []}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="attendance" />
+      </LineChart>
+
       {/* 💰 Offering Chart */}
       <h3>Offering Trend</h3>
       <BarChart width={600} height={300} data={data.offering_trend}>

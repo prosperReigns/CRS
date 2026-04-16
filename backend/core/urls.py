@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.accounts.views import LoginView
+from apps.members.views import ChurchServiceListView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -27,6 +28,7 @@ urlpatterns = [
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="api-token-refresh"),
     path('api/structure/', include('apps.structure.urls')),
     path('api/members/', include('apps.members.urls')),
+    path("api/services/", ChurchServiceListView.as_view(), name="church-services"),
     path('api/accounts/', include('apps.accounts.urls')),
     path('api/reports/', include('apps.reports.urls')),
     path('api/communication/', include('apps.communication.urls')),

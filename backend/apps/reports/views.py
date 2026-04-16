@@ -26,6 +26,7 @@ def scoped_reports(user):
             "submitted_by",
             "reviewed_by",
             "approved_by",
+            "service",
         )
         .prefetch_related("images", "comments__author", "activity_logs__actor")
         .prefetch_related("attendees__user")

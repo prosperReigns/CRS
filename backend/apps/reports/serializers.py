@@ -52,6 +52,7 @@ class CellReportSerializer(serializers.ModelSerializer):
     reviewer = ReportUserSerializer(source="reviewed_by", read_only=True)
     approver = ReportUserSerializer(source="approved_by", read_only=True)
     cell_name = serializers.CharField(source="cell.name", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True)
     attendees = ReportAttendeeSerializer(many=True, read_only=True)
     images = ReportImageSerializer(many=True, read_only=True)
     comments = ReportCommentSerializer(many=True, read_only=True)
@@ -66,6 +67,8 @@ class CellReportSerializer(serializers.ModelSerializer):
             "submitted_by",
             "author",
             "meeting_date",
+            "service",
+            "service_name",
             "attendees",
             "attendance_count",
             "new_members",
@@ -94,6 +97,7 @@ class CellReportSerializer(serializers.ModelSerializer):
             "author",
             "reviewer",
             "approver",
+            "service_name",
             "reviewed_at",
             "approved_at",
             "attendance_count",
@@ -119,6 +123,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             "id",
             "cell",
             "meeting_date",
+            "service",
             "attendees",
             "new_members",
             "offering_amount",
@@ -205,6 +210,12 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"non_field_errors": ["A report for this cell and meeting date already exists."]}
                 )
+
+        service = attrs.get("service", getattr(self.instance, "service", None))
+        if service and meeting_date and service.day_of_week.lower() != meeting_date.strftime("%A").lower():
+            raise serializers.ValidationError(
+                {"service": f"Selected service runs on {service.day_of_week}, but meeting date is {meeting_date.strftime('%A')}."}
+            )
 
         return attrs
 

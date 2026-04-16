@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from apps.members.models import ChurchService
 from apps.members.models import MemberProfile
 from apps.structure.models import Cell
 
@@ -17,6 +18,7 @@ class CellReport(models.Model):
     cell = models.ForeignKey(Cell, on_delete=models.CASCADE, related_name="reports")
     submitted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="submitted_reports")
     meeting_date = models.DateField(db_index=True)
+    service = models.ForeignKey(ChurchService, null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
     attendees = models.ManyToManyField(MemberProfile, related_name="cell_reports")
     attendance_count = models.PositiveIntegerField(default=0)
     new_members = models.PositiveIntegerField(default=0)
