@@ -61,29 +61,32 @@ function ReportDetail({ report, refresh }) {
   };
 
   return (
-    <div>
-      <h2>Report Details</h2>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-slate-900">Report Details</h2>
       <ErrorState error={error} />
 
-      <p><strong>Date:</strong> {report.meeting_date}</p>
-      <p><strong>Attendance:</strong> {report.attendance_count}</p>
-      <p>
+      <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+        <p><strong>Date:</strong> {report.meeting_date}</p>
+        <p><strong>Attendance:</strong> {report.attendance_count}</p>
+        <p>
         <strong>Attendees:</strong>{" "}
         {report.attendees?.length
           ? report.attendees.map((attendee) => attendee.user?.username).join(", ")
           : "None"}
-      </p>
-      <p><strong>Offering:</strong> {report.offering_amount}</p>
-      <p><strong>Summary:</strong> {report.summary}</p>
+        </p>
+        <p><strong>Offering:</strong> {report.offering_amount}</p>
+        <p><strong>Summary:</strong> {report.summary}</p>
+      </div>
 
-      {/* 📸 Images */}
-      <h3>Images</h3>
-      {report.images?.map((img) => (
-        <img key={img.id} src={img.image} width="150" />
-      ))}
+      <h3 className="text-lg font-semibold text-slate-900">Images</h3>
+      <div className="flex flex-wrap gap-2">
+        {report.images?.map((img) => (
+          <img key={img.id} src={img.image} width="150" className="rounded-lg border border-slate-200 object-cover" />
+        ))}
+      </div>
 
-      {/* 🔄 Actions */}
-      <h3>Actions</h3>
+      <h3 className="text-lg font-semibold text-slate-900">Actions</h3>
+      <div className="flex flex-wrap gap-2">
       {user?.role === "fellowship_leader" && report.status === "pending" && (
         <Button onClick={handleReview}>Review</Button>
       )}
@@ -94,18 +97,19 @@ function ReportDetail({ report, refresh }) {
           <Button onClick={() => setConfirmAction("reject")}>Reject</Button>
         </>
       )}
+      </div>
 
-      {/* 💬 Comments */}
-      <h3>Comments</h3>
+      <h3 className="text-lg font-semibold text-slate-900">Comments</h3>
       {report.comments?.map((c) => (
-        <div key={c.id} style={{ borderBottom: "1px solid #ccc" }}>
+        <div key={c.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
           <p><strong>{c.author?.username}</strong></p>
-          <p>{c.comment}</p>
+          <p className="text-sm text-slate-600">{c.comment}</p>
         </div>
       ))}
 
       <textarea
         placeholder="Add comment..."
+        className="min-h-24 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={comment}
         onChange={(e) => setComment(e.target.value)}
       />
