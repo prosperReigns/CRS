@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.db.models import Count, Q, Sum
-from django.db.models.functions import TruncWeek
+from django.db.models.functions import TruncDate, TruncWeek
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -35,13 +35,17 @@ class DashboardAnalyticsView(APIView):
             return qs.filter(cell__leader=user)
         return qs.none()
 
-    def _scope_attendance(self, user):
-        members = self._scope_members(user)
-        return Attendance.objects.filter(member__in=members)
-
     def _scope_soul_winning(self, user):
         members = self._scope_members(user)
         return SoulWinning.objects.filter(member__in=members)
+
+    def _scope_attendance(self, user):
+        members = self._scope_members(user)
+        return Attendance.objects.select_related("service", "member").filter(
+            member__in=members,
+            service__isnull=False,
+            present=True,
+        )
 
     def get(self, request):
         user = request.user
@@ -51,8 +55,8 @@ class DashboardAnalyticsView(APIView):
 
         members_qs = self._scope_members(user)
         reports_qs = self._scope_reports(user)
-        attendance_qs = self._scope_attendance(user)
         soul_qs = self._scope_soul_winning(user)
+        attendance_qs = self._scope_attendance(user)
 
         total_members = members_qs.count()
         active_members = members_qs.filter(last_attended__gte=active_since).count()
@@ -67,14 +71,14 @@ class DashboardAnalyticsView(APIView):
         souls_total = soul_qs.aggregate(total=Sum("converts"))["total"] or 0
 
         attendance_trend_qs = (
-            attendance_qs.filter(date__gte=trend_since, present=True)
-            .annotate(week=TruncWeek("date"))
+            reports_qs.filter(meeting_date__gte=trend_since)
+            .annotate(week=TruncWeek("meeting_date"))
             .values("week")
-            .annotate(count=Count("id"))
+            .annotate(count=Sum("attendance_count"))
             .order_by("week")
         )
         attendance_trend = [
-            {"date": row["week"].isoformat() if row["week"] else None, "count": row["count"]}
+            {"date": row["week"].isoformat() if row["week"] else None, "count": row["count"] or 0}
             for row in attendance_trend_qs
         ]
 
@@ -110,6 +114,31 @@ class DashboardAnalyticsView(APIView):
             for row in top_cells_qs
         ]
 
+        service_attendance_qs = (
+            attendance_qs.values("service_id", "service__name")
+            .annotate(attendance=Count("id"))
+            .order_by("service__name")
+        )
+        service_attendance = [
+            {
+                "service_id": row["service_id"],
+                "name": row["service__name"],
+                "attendance": row["attendance"] or 0,
+            }
+            for row in service_attendance_qs
+        ]
+
+        daily_total_attendance_qs = (
+            attendance_qs.annotate(day=TruncDate("date"))
+            .values("day")
+            .annotate(attendance=Count("id"))
+            .order_by("day")
+        )
+        daily_total_attendance = [
+            {"date": row["day"].isoformat() if row["day"] else None, "attendance": row["attendance"] or 0}
+            for row in daily_total_attendance_qs
+        ]
+
         return Response(
             {
                 "members": {
@@ -125,6 +154,8 @@ class DashboardAnalyticsView(APIView):
                 "offering_total": float(reports_summary["offering_total"] or 0),
                 "souls_won": souls_total,
                 "attendance_trend": attendance_trend,
+                "services": service_attendance,
+                "daily_total_attendance": daily_total_attendance,
                 "offering_trend": offering_trend,
                 "top_cells": top_cells,
             }

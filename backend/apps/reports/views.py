@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from apps.accounts.models import User
 from apps.communication.models import Notification
+from .services.report_enforcement import enforce_report_submission
 from .models import CellReport, ReportActivityLog, ReportComment
 from .permissions import CellReportPermission
 from .serializers import (
@@ -25,8 +26,10 @@ def scoped_reports(user):
             "submitted_by",
             "reviewed_by",
             "approved_by",
+            "service",
         )
         .prefetch_related("images", "comments__author", "activity_logs__actor")
+        .prefetch_related("attendees__user")
         .all()
     )
 
@@ -52,6 +55,7 @@ class CellReportViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         report = serializer.save()
+        enforce_report_submission()
         self._log(report, ReportActivityLog.Action.CREATED)
         self._notify(report, "Report Submitted", "A new report has been submitted.")
 

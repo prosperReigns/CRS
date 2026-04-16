@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.structure.models import Cell
@@ -61,6 +62,32 @@ class SoulWinning(models.Model):
         return f"{self.member.user.username} - {self.date}"
 
 
+class ChurchService(models.Model):
+    class DayOfWeek(models.TextChoices):
+        MONDAY = "Monday", "Monday"
+        TUESDAY = "Tuesday", "Tuesday"
+        WEDNESDAY = "Wednesday", "Wednesday"
+        THURSDAY = "Thursday", "Thursday"
+        FRIDAY = "Friday", "Friday"
+        SATURDAY = "Saturday", "Saturday"
+        SUNDAY = "Sunday", "Sunday"
+
+    name = models.CharField(max_length=50)
+    day_of_week = models.CharField(max_length=10, choices=DayOfWeek.choices)
+    start_time = models.TimeField()
+    end_time = models.TimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["day_of_week", "start_time", "name"]
+        indexes = [
+            models.Index(fields=["is_active", "day_of_week"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} - {self.day_of_week}"
+
+
 class Attendance(models.Model):
     class ServiceType(models.TextChoices):
         SUNDAY = "sunday", "Sunday Service"
@@ -69,6 +96,7 @@ class Attendance(models.Model):
 
     member = models.ForeignKey(MemberProfile, on_delete=models.CASCADE, related_name="attendance_records")
     date = models.DateField()
+    service = models.ForeignKey(ChurchService, on_delete=models.CASCADE, related_name="attendances", null=True, blank=True)
     service_type = models.CharField(max_length=20, choices=ServiceType.choices, default=ServiceType.SUNDAY)
     present = models.BooleanField(default=True)
     recorded_by = models.ForeignKey(
@@ -88,11 +116,19 @@ class Attendance(models.Model):
                 fields=["member", "date", "service_type"],
                 name="uniq_member_attendance_per_service",
             ),
+            models.UniqueConstraint(
+                fields=["member", "date", "service"],
+                name="uniq_member_attendance_per_church_service",
+                condition=Q(service__isnull=False),
+            ),
         ]
         indexes = [
             models.Index(fields=["date", "service_type"]),
+            models.Index(fields=["date", "service"]),
             models.Index(fields=["member", "date"]),
         ]
 
     def __str__(self):
-        return f"{self.member.user.username} - {self.date} ({self.service_type})"
+        service = getattr(self, "service", None)
+        service_label = service.name if service else self.service_type
+        return f"{self.member.user.username} - {self.date} ({service_label})"

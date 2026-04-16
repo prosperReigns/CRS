@@ -24,6 +24,15 @@ class Fellowship(models.Model):
 
 
 class Cell(models.Model):
+    class MeetingDay(models.TextChoices):
+        MONDAY = "monday", "Monday"
+        TUESDAY = "tuesday", "Tuesday"
+        WEDNESDAY = "wednesday", "Wednesday"
+        THURSDAY = "thursday", "Thursday"
+        FRIDAY = "friday", "Friday"
+        SATURDAY = "saturday", "Saturday"
+        SUNDAY = "sunday", "Sunday"
+
     name = models.CharField(max_length=255)
     fellowship = models.ForeignKey(Fellowship, on_delete=models.CASCADE, related_name="cells")
     leader = models.ForeignKey(
@@ -33,7 +42,7 @@ class Cell(models.Model):
         blank=True,
         related_name="led_cells",
     )
-    meeting_day = models.CharField(max_length=20)
+    meeting_day = models.CharField(max_length=20, choices=MeetingDay.choices, default=MeetingDay.SATURDAY)
     meeting_time = models.TimeField()
     venue = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

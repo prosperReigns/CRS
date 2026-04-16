@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from apps.members.models import ChurchService
+from apps.members.models import MemberProfile
 from apps.structure.models import Cell
 
 User = settings.AUTH_USER_MODEL
@@ -16,7 +18,9 @@ class CellReport(models.Model):
     cell = models.ForeignKey(Cell, on_delete=models.CASCADE, related_name="reports")
     submitted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="submitted_reports")
     meeting_date = models.DateField(db_index=True)
-    attendance_count = models.PositiveIntegerField()
+    service = models.ForeignKey(ChurchService, null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
+    attendees = models.ManyToManyField(MemberProfile, related_name="cell_reports")
+    attendance_count = models.PositiveIntegerField(default=0)
     new_members = models.PositiveIntegerField(default=0)
     offering_amount = models.DecimalField(max_digits=12, decimal_places=2)
     summary = models.TextField()
@@ -52,6 +56,12 @@ class CellReport(models.Model):
 
     def __str__(self):
         return f"{self.cell.name} - {self.meeting_date}"
+
+    def sync_attendance_count(self, *, save=True):
+        self.attendance_count = self.attendees.count()
+        if save:
+            self.save(update_fields=["attendance_count", "updated_at"])
+        return self.attendance_count
 
 
 class ReportImage(models.Model):

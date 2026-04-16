@@ -3,12 +3,20 @@ from django.db.models import Case, DateField, F, Value, When
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.accounts.models import User
-from .models import Attendance, MemberProfile, SoulWinning
+from .models import Attendance, ChurchService, MemberProfile, SoulWinning
 from .permissions import AttendancePermission, MemberProfilePermission, SoulWinningPermission
-from .serializers import AttendanceSerializer, BulkAttendanceSerializer, MemberProfileSerializer, SoulWinningSerializer
+from .serializers import (
+    AttendanceSerializer,
+    BulkAttendanceSerializer,
+    ChurchServiceSerializer,
+    MemberProfileSerializer,
+    SoulWinningSerializer,
+)
 
 
 def scoped_member_profiles(user):
@@ -84,7 +92,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         profiles = scoped_member_profiles(self.request.user)
-        return Attendance.objects.select_related("member", "member__user", "recorded_by").filter(member__in=profiles)
+        return Attendance.objects.select_related("member", "member__user", "recorded_by", "service").filter(member__in=profiles)
 
     def perform_create(self, serializer):
         member = serializer.validated_data["member"]
@@ -99,19 +107,14 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def bulk_mark(self, request):
         user = request.user
-        if user.role not in {
-            User.Role.PASTOR,
-            User.Role.STAFF,
-            User.Role.FELLOWSHIP_LEADER,
-            User.Role.CELL_LEADER,
-        }:
+        if user.role not in {User.Role.PASTOR, User.Role.STAFF}:
             raise PermissionDenied("You are not allowed to mark bulk attendance.")
 
         serializer = BulkAttendanceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         date = serializer.validated_data["date"]
-        service_type = serializer.validated_data["service_type"]
+        service = serializer.validated_data["service"]
         present = serializer.validated_data["present"]
         requested_ids = serializer.validated_data["member_ids"]
 
@@ -124,7 +127,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             Attendance.objects.filter(
                 member_id__in=requested_ids,
                 date=date,
-                service_type=service_type,
+                service=service,
             ).values_list("member_id", flat=True)
         )
 
@@ -133,7 +136,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             Attendance(
                 member_id=member_id,
                 date=date,
-                service_type=service_type,
+                service=service,
                 present=present,
                 recorded_by=user,
             )
@@ -155,10 +158,19 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "date": date,
-                "service_type": service_type,
+                "service_id": service.id,
+                "service_name": service.name,
                 "requested": len(requested_ids),
                 "created": len(to_create_ids),
                 "duplicates": len(existing_ids),
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class ChurchServiceListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        services = ChurchService.objects.filter(is_active=True).order_by("day_of_week", "start_time", "name")
+        return Response(ChurchServiceSerializer(services, many=True).data)

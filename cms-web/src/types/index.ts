@@ -6,6 +6,7 @@ export interface User {
   email: string | null;
   phone: string | null;
   role: "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";
+  is_frozen?: boolean;
   is_active?: boolean;
   date_joined?: string;
 }
@@ -54,6 +55,7 @@ export interface Report {
   submitted_by: number;
   author: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
   meeting_date: string;
+  attendees: ReportAttendee[];
   attendance_count: number;
   new_members: number;
   offering_amount: string;
@@ -70,16 +72,34 @@ export interface Report {
   activity_logs: ReportActivityLog[];
 }
 
+export interface ReportAttendee {
+  id: number;
+  user: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
+  cell: number | null;
+  cell_name: string | null;
+}
+
 export interface Attendance {
   id: number;
   member: number;
   member_name: string;
   date: string;
+  service: number | null;
+  service_name?: string | null;
   service_type: "sunday" | "midweek" | "special";
   present: boolean;
   recorded_by?: number | null;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface ChurchService {
+  id: number;
+  name: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string | null;
+  is_active: boolean;
 }
 
 export interface Message {
@@ -106,6 +126,8 @@ export interface AnalyticsResponse {
   offering_total: number;
   souls_won: number;
   attendance_trend: Array<{ date: string; count: number }>;
+  services?: Array<{ service_id: number; name: string; attendance: number }>;
+  daily_total_attendance?: Array<{ date: string; attendance: number }>;
   offering_trend: Array<{ meeting_date: string; total: number }>;
   top_cells: Array<{
     cell_id: number;
@@ -118,14 +140,15 @@ export interface AnalyticsResponse {
 
 export interface AttendanceBulkRequest {
   date: string;
-  service_type: "sunday" | "midweek" | "special";
+  service_id: number;
   members: number[];
   present?: boolean;
 }
 
 export interface AttendanceBulkResponse {
   date: string;
-  service_type: "sunday" | "midweek" | "special";
+  service_id: number;
+  service_name?: string;
   requested: number;
   created: number;
   duplicates: number;
