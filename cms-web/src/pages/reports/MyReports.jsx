@@ -8,13 +8,13 @@ import EmptyState from "../../components/ui/EmptyState";
 const getStatusColor = (status) => {
   switch (status) {
     case "approved":
-      return "green";
+      return "text-emerald-600";
     case "rejected":
-      return "red";
+      return "text-red-600";
     case "reviewed":
-      return "orange";
+      return "text-amber-600";
     default:
-      return "gray";
+      return "text-slate-500";
   }
 };
 
@@ -43,29 +43,25 @@ function MyReports() {
   if (reports.length === 0) return <EmptyState label="No reports submitted yet." />;
 
   return (
-    <div>
-      <h2>My Reports</h2>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-slate-900">My Reports</h2>
 
       {reports.map((r) => (
-        <div key={r.id} style={{ border: "1px solid #ccc", margin: "10px" }}>
-          <p>Date: {r.meeting_date}</p>
-          <p>Attendance: {r.attendance_count}</p>
-          <p>
+        <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-600">Date: {r.meeting_date}</p>
+          <p className="text-sm text-slate-600">Attendance: {r.attendance_count}</p>
+          <p className="text-sm text-slate-600">
             Attendees: {r.attendees?.length ? r.attendees.map((attendee) => attendee.user?.username).join(", ") : "-"}
           </p>
-          <p style={{ color: getStatusColor(r.status) }}>
+          <p className={`mt-2 font-semibold capitalize ${getStatusColor(r.status)}`}>
             Status: {r.status}
           </p>
 
-          {/* Images */}
-          {r.images?.map((img) => (
-            <img
-              key={img.id}
-              src={img.image}
-              alt=""
-              width="100"
-            />
-          ))}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {r.images?.map((img) => (
+              <img key={img.id} src={img.image} alt="" width="100" className="rounded-lg border border-slate-200 object-cover" />
+            ))}
+          </div>
         </div>
       ))}
     </div>

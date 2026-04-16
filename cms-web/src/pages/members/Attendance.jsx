@@ -68,14 +68,23 @@ function Attendance() {
   };
 
   return (
-    <div>
-      <h2>Mark Attendance</h2>
+    <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-2xl font-bold text-slate-900">Mark Attendance</h2>
       {loading && <LoadingState label="Loading members..." />}
       <ErrorState error={error} />
-      {success && <p style={{ color: "green" }}>{success}</p>}
+      {success && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{success}</p>}
 
-      <input type="date" onChange={(e) => setDate(e.target.value)} />
-      <select value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+      <div className="grid gap-3 md:grid-cols-2">
+        <input
+          type="date"
+          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          onChange={(e) => setDate(e.target.value)}
+        />
+        <select
+          value={serviceId}
+          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          onChange={(e) => setServiceId(e.target.value)}
+        >
         {services.length === 0 ? (
           <option value="">No active services available</option>
         ) : null}
@@ -84,24 +93,29 @@ function Attendance() {
             {service.name} ({service.day_of_week})
           </option>
         ))}
-      </select>
+        </select>
+      </div>
 
       {!loading && members.length === 0 && <EmptyState label="No members available for attendance." />}
+      <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-2 xl:grid-cols-3">
       {members.map((m) => (
-        <div key={m.id}>
-          <label>
+        <div key={m.id} className="rounded-md bg-white p-2">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={selected.includes(m.id)}
               onChange={() => toggleMember(m.id)}
+              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
             />
             {m.user?.username}
           </label>
         </div>
       ))}
+      </div>
 
       <button
         type="button"
+        className="w-full rounded-lg bg-brand-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
         onClick={handleSubmit}
         disabled={loading || members.length === 0 || selected.length === 0 || !serviceId}
       >

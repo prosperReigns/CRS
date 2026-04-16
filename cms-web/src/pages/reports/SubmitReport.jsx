@@ -3,8 +3,6 @@ import { createReport } from "../../api/reports";
 import { getMembers } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
 
-const ATTENDEE_LIST_MAX_HEIGHT = "220px";
-
 function SubmitReport() {
   const { user } = useContext(AuthContext);
   const [form, setForm] = useState({
@@ -106,28 +104,29 @@ function SubmitReport() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Submit Weekly Report</h2>
+    <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-2xl font-bold text-slate-900">Submit Weekly Report</h2>
       {user?.is_frozen && (
-        <p style={{ color: "#b45309" }}>
+        <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
           Your account is temporarily restricted. Please submit your pending report.
         </p>
       )}
       <div aria-live="polite">
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        {success && <p style={{ color: "green" }}>{success}</p>}
+        {error && <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {success && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{success}</p>}
       </div>
 
       {images.length > 0 && (
-        <ul aria-label="Uploaded images">
+        <ul aria-label="Uploaded images" className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
           {images.map((img, i) => (
-            <li key={i}>{img.name}</li>
+            <li key={i} className="truncate">{img.name}</li>
           ))}
         </ul>
       )}
 
       <input
         placeholder="Cell ID"
+        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={form.cell}
         onChange={(e) => setForm({ ...form, cell: e.target.value })}
         required
@@ -135,6 +134,7 @@ function SubmitReport() {
 
       <input
         type="date"
+        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={form.meeting_date}
         onChange={(e) => setForm({ ...form, meeting_date: e.target.value })}
         required
@@ -142,20 +142,22 @@ function SubmitReport() {
 
       <input
         placeholder="Search members..."
+        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={attendeeSearch}
         onChange={(e) => setAttendeeSearch(e.target.value)}
       />
 
-      <p>
+      <p className="text-sm text-slate-600">
         Selected attendees: <strong>{attendees.length}</strong>
       </p>
-      <div style={{ maxHeight: ATTENDEE_LIST_MAX_HEIGHT, overflow: "auto", border: "1px solid #ddd", padding: "8px" }}>
+      <div className="max-h-56 space-y-1 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
         {visibleMembers.map((member) => (
-          <label key={member.id} style={{ display: "block", marginBottom: "6px" }}>
+          <label key={member.id} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-white">
             <input
               type="checkbox"
               checked={attendees.includes(member.id)}
               onChange={() => toggleAttendee(member.id)}
+              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
             />{" "}
             {member.user?.username} {member.cell_name ? `(${member.cell_name})` : ""}
           </label>
@@ -163,9 +165,9 @@ function SubmitReport() {
       </div>
 
       {selectedMembers.length > 0 && (
-        <div>
-          <p>Selected members preview:</p>
-          <ul>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-sm font-medium text-slate-700">Selected members preview:</p>
+          <ul className="grid gap-1 text-sm text-slate-600">
             {selectedMembers.map((member) => (
               <li key={member.id}>{member.user?.username}</li>
             ))}
@@ -177,6 +179,7 @@ function SubmitReport() {
         placeholder="New Members"
         type="number"
         min="0"
+        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={form.new_members}
         onChange={(e) => setForm({ ...form, new_members: e.target.value })}
       />
@@ -186,6 +189,7 @@ function SubmitReport() {
         type="number"
         min="0"
         step="0.01"
+        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={form.offering_amount}
         onChange={(e) => setForm({ ...form, offering_amount: e.target.value })}
         required
@@ -193,14 +197,25 @@ function SubmitReport() {
 
       <textarea
         placeholder="Summary"
+        className="min-h-28 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={form.summary}
         onChange={(e) => setForm({ ...form, summary: e.target.value })}
         required
       />
 
-      <input type="file" multiple onChange={(e) => setImages([...e.target.files])} />
+      <input
+        type="file"
+        multiple
+        className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2 text-sm"
+        onChange={(e) => setImages([...e.target.files])}
+      />
 
-      <button type="submit" disabled={submitting} aria-busy={submitting}>
+      <button
+        type="submit"
+        className="w-full rounded-lg bg-brand-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
+        disabled={submitting}
+        aria-busy={submitting}
+      >
         {submitting ? "Submitting..." : "Submit"}
       </button>
     </form>
