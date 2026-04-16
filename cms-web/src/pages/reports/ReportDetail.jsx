@@ -7,17 +7,21 @@ import {
   reviewReport,
   addComment,
 } from "../../api/reports";
+import ErrorState from "../../components/ui/ErrorState";
+import ConfirmModal from "../../components/ui/ConfirmModal";
+import Button from "../../components/ui/Button";
 
 function ReportDetail({ report, refresh }) {
   const { user } = useContext(AuthContext);
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
-
+  const [confirmAction, setConfirmAction] = useState("");
+  
   const handleApprove = async () => {
-    if (!window.confirm("Approve this report?")) return;
     try {
       setError("");
       await approveReport(report.id);
+      setConfirmAction("");
       refresh();
     } catch (err) {
       setError(err.message || "Failed to approve report.");
@@ -25,10 +29,10 @@ function ReportDetail({ report, refresh }) {
   };
 
   const handleReject = async () => {
-    if (!window.confirm("Reject this report?")) return;
     try {
       setError("");
       await rejectReport(report.id);
+      setConfirmAction("");
       refresh();
     } catch (err) {
       setError(err.message || "Failed to reject report.");
@@ -60,7 +64,7 @@ function ReportDetail({ report, refresh }) {
   return (
     <div>
       <h2>Report Details</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <ErrorState error={error} />
 
       <p><strong>Date:</strong> {report.meeting_date}</p>
       <p><strong>Attendance:</strong> {report.attendance_count}</p>
@@ -76,13 +80,13 @@ function ReportDetail({ report, refresh }) {
       {/* 🔄 Actions */}
       <h3>Actions</h3>
       {user?.role === "fellowship_leader" && report.status === "pending" && (
-        <button onClick={handleReview}>Review</button>
+        <Button onClick={handleReview}>Review</Button>
       )}
 
       {user?.role === "pastor" && report.status === "reviewed" && (
         <>
-          <button onClick={handleApprove}>Approve</button>
-          <button onClick={handleReject}>Reject</button>
+          <Button onClick={() => setConfirmAction("approve")}>Approve</Button>
+          <Button onClick={() => setConfirmAction("reject")}>Reject</Button>
         </>
       )}
 
@@ -101,7 +105,24 @@ function ReportDetail({ report, refresh }) {
         onChange={(e) => setComment(e.target.value)}
       />
 
-      <button onClick={handleComment}>Send</button>
+      <Button onClick={handleComment}>Send</Button>
+
+      <ConfirmModal
+        open={confirmAction === "approve"}
+        title="Approve report"
+        message="Approve this report now?"
+        confirmText="Approve"
+        onCancel={() => setConfirmAction("")}
+        onConfirm={handleApprove}
+      />
+      <ConfirmModal
+        open={confirmAction === "reject"}
+        title="Reject report"
+        message="Reject this report now?"
+        confirmText="Reject"
+        onCancel={() => setConfirmAction("")}
+        onConfirm={handleReject}
+      />
     </div>
   );
 }

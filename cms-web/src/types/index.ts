@@ -6,9 +6,11 @@ export interface User {
   email: string | null;
   phone: string | null;
   role: "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";
+  is_active?: boolean;
+  date_joined?: string;
 }
 
-export interface MemberProfile {
+export interface Member {
   id: number;
   user: User;
   cell: number | null;
@@ -36,7 +38,16 @@ export interface ReportComment {
   created_at: string;
 }
 
-export interface CellReport {
+export interface ReportActivityLog {
+  id: number;
+  action: "created" | "reviewed" | "approved" | "rejected" | "commented";
+  note: string;
+  actor: number | null;
+  actor_username: string | null;
+  created_at: string;
+}
+
+export interface Report {
   id: number;
   cell: number;
   cell_name: string;
@@ -56,6 +67,7 @@ export interface CellReport {
   updated_at: string;
   images: ReportImage[];
   comments: ReportComment[];
+  activity_logs: ReportActivityLog[];
 }
 
 export interface Attendance {
@@ -63,17 +75,29 @@ export interface Attendance {
   member: number;
   member_name: string;
   date: string;
-  service_type: string;
+  service_type: "sunday" | "midweek" | "special";
   present: boolean;
+  recorded_by?: number | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Message {
   id: number;
   sender: Pick<User, "id" | "username">;
   receiver: Pick<User, "id" | "username">;
+  sender_id: number;
+  recipient_id: number;
   content: string;
   is_read: boolean;
   created_at: string;
+}
+
+export interface Conversation {
+  partner: Pick<User, "id" | "username" | "role">;
+  last_message: string;
+  last_message_at: string;
+  unread_count: number;
 }
 
 export interface AnalyticsResponse {
@@ -83,6 +107,13 @@ export interface AnalyticsResponse {
   souls_won: number;
   attendance_trend: Array<{ date: string; count: number }>;
   offering_trend: Array<{ meeting_date: string; total: number }>;
+  top_cells: Array<{
+    cell_id: number;
+    cell_name: string;
+    report_count: number;
+    total_attendance: number;
+    total_offering: number;
+  }>;
 }
 
 export interface AttendanceBulkRequest {
@@ -91,3 +122,14 @@ export interface AttendanceBulkRequest {
   members: number[];
   present?: boolean;
 }
+
+export interface AttendanceBulkResponse {
+  date: string;
+  service_type: "sunday" | "midweek" | "special";
+  requested: number;
+  created: number;
+  duplicates: number;
+}
+
+export type MemberProfile = Member;
+export type CellReport = Report;

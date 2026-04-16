@@ -35,6 +35,29 @@ class MessageViewSet(viewsets.ModelViewSet):
             category=Notification.Category.MESSAGE,
         )
 
+    @action(detail=False, methods=["get"], url_path="thread")
+    def thread(self, request):
+        partner_id = request.query_params.get("user_id")
+        if not partner_id:
+            return Response({"detail": "user_id query parameter is required."}, status=400)
+
+        try:
+            partner_id = int(partner_id)
+        except (TypeError, ValueError):
+            return Response({"detail": "user_id must be a valid integer."}, status=400)
+
+        user = request.user
+        queryset = (
+            self.get_queryset()
+            .filter(
+                Q(sender_id=user.id, recipient_id=partner_id)
+                | Q(sender_id=partner_id, recipient_id=user.id)
+            )
+            .order_by("-created_at")
+        )
+        serializer = MessageSerializer(queryset, many=True)
+        return Response(serializer.data)
+
     @action(detail=False, methods=["get"])
     def conversations(self, request):
         user = request.user
