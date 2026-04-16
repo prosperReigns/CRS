@@ -16,16 +16,17 @@ function Sidebar() {
 
   const canManageReports = ["pastor", "staff", "fellowship_leader"].includes(user.role);
   const canViewDashboard = ["pastor", "staff"].includes(user.role);
-  const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
+  const canManageMembers = ["pastor", "staff", "fellowship_leader"].includes(user.role);
   const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
     user.role
   );
+  const isFrozen = Boolean(user.is_frozen);
 
   return (
     <div style={{ width: "220px", background: "#111", color: "#fff", minHeight: "100vh", padding: "16px" }}>
       <h3>ChurchSys</h3>
 
-      {canViewDashboard && (
+      {canViewDashboard && !isFrozen && (
         <Link style={linkStyle} to="/dashboard">
           Dashboard
         </Link>
@@ -36,19 +37,21 @@ function Sidebar() {
           <Link style={linkStyle} to="/reports/submit">
             Submit Report
           </Link>
-          <Link style={linkStyle} to="/reports/my">
-            My Reports
-          </Link>
+          {!isFrozen && (
+            <Link style={linkStyle} to="/reports/my">
+              My Reports
+            </Link>
+          )}
         </>
       )}
 
-      {canManageReports && (
+      {canManageReports && !isFrozen && (
         <Link style={linkStyle} to="/reports/manage">
           {user.role === "fellowship_leader" ? "Review Reports" : "Manage Reports"}
         </Link>
       )}
 
-      {canManageMembers && (
+      {canManageMembers && !isFrozen && (
         <>
           <Link style={linkStyle} to="/members">
             Members
@@ -59,7 +62,7 @@ function Sidebar() {
         </>
       )}
 
-      {canMessage && (
+      {canMessage && !isFrozen && (
         <Link style={linkStyle} to="/messages">
           Messages
         </Link>

@@ -6,6 +6,7 @@ export interface User {
   email: string | null;
   phone: string | null;
   role: "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";
+  is_frozen?: boolean;
   is_active?: boolean;
   date_joined?: string;
 }
@@ -54,6 +55,7 @@ export interface Report {
   submitted_by: number;
   author: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
   meeting_date: string;
+  attendees: ReportAttendee[];
   attendance_count: number;
   new_members: number;
   offering_amount: string;
@@ -68,6 +70,13 @@ export interface Report {
   images: ReportImage[];
   comments: ReportComment[];
   activity_logs: ReportActivityLog[];
+}
+
+export interface ReportAttendee {
+  id: number;
+  user: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
+  cell: number | null;
+  cell_name: string | null;
 }
 
 export interface Attendance {

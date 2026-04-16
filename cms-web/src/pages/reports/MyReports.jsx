@@ -50,6 +50,9 @@ function MyReports() {
         <div key={r.id} style={{ border: "1px solid #ccc", margin: "10px" }}>
           <p>Date: {r.meeting_date}</p>
           <p>Attendance: {r.attendance_count}</p>
+          <p>
+            Attendees: {r.attendees?.length ? r.attendees.map((attendee) => attendee.user?.username).join(", ") : "-"}
+          </p>
           <p style={{ color: getStatusColor(r.status) }}>
             Status: {r.status}
           </p>

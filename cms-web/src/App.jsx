@@ -11,7 +11,7 @@ import Members from "./pages/members/Members";
 import Attendance from "./pages/members/Attendance";
 import Messaging from "./pages/messaging/Messaging";
 
-const memberManagerRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
+const memberManagerRoles = ["pastor", "staff", "fellowship_leader"];
 const messagingRoles = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
 
 function ProtectedLayoutRoute({ allowedRoles, children }) {

@@ -67,6 +67,12 @@ function ReportDetail({ report, refresh }) {
 
       <p><strong>Date:</strong> {report.meeting_date}</p>
       <p><strong>Attendance:</strong> {report.attendance_count}</p>
+      <p>
+        <strong>Attendees:</strong>{" "}
+        {report.attendees?.length
+          ? report.attendees.map((attendee) => attendee.user?.username).join(", ")
+          : "None"}
+      </p>
       <p><strong>Offering:</strong> {report.offering_amount}</p>
       <p><strong>Summary:</strong> {report.summary}</p>
 

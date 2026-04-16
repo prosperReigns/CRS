@@ -18,6 +18,7 @@ class User(AbstractUser):
         db_index=True,
     )
     phone = models.CharField(max_length=20, blank=True)
+    is_frozen = models.BooleanField(default=False)
 
     class Meta:
         indexes = [
