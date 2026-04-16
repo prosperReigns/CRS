@@ -12,8 +12,17 @@ export interface ApiErrorShape {
   [key: string]: unknown;
 }
 
+const configuredBaseUrl =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:8000/api/";
+
+const normalizedBaseUrl = configuredBaseUrl.endsWith("/")
+  ? configuredBaseUrl
+  : `${configuredBaseUrl}/`;
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/",
+  baseURL: normalizedBaseUrl,
 });
 
 let onUnauthorized: UnauthorizedHandler = null;

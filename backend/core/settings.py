@@ -15,6 +15,22 @@ from pathlib import Path
 from decouple import config
 from datetime import timedelta
 
+
+def _parse_bool(value, default=False):
+    if value is None:
+        return default
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on", "debug"}:
+        return True
+    if normalized in {"0", "false", "no", "off", ""}:
+        return False
+    return default
+
+
+def _parse_csv(value):
+    return [part.strip() for part in str(value).split(",") if part.strip()]
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -26,10 +42,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG_RAW = str(config("DEBUG", default="false")).strip().lower()
-DEBUG = DEBUG_RAW in {"1", "true", "yes", "on", "debug"}
+DEBUG = _parse_bool(config("DEBUG", default="false"), default=False)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*").split(",")
+
+# CORS (local frontend dev + configurable origins)
+CORS_ALLOW_ALL_ORIGINS = _parse_bool(config("CORS_ALLOW_ALL_ORIGINS", default=str(DEBUG)), default=DEBUG)
+CORS_ALLOWED_ORIGINS = _parse_csv(
+    config(
+        "CORS_ALLOWED_ORIGINS",
+        default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000",
+    )
+)
+CORS_ALLOW_METHODS = _parse_csv(config("CORS_ALLOW_METHODS", default="GET,POST,PUT,PATCH,DELETE,OPTIONS"))
+CORS_ALLOW_HEADERS = _parse_csv(
+    config(
+        "CORS_ALLOW_HEADERS",
+        default="Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Requested-With,If-Modified-Since",
+    )
+)
+CORS_MAX_AGE = int(config("CORS_MAX_AGE", default=86400))
 
 
 # Application definition
@@ -55,6 +87,7 @@ if importlib.util.find_spec("django_filters"):
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'core.middleware.SimpleCORSMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
