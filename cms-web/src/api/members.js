@@ -3,7 +3,12 @@ import API from "./axios";
 const toList = (payload) => (Array.isArray(payload) ? payload : payload?.results || []);
 
 const unwrapError = (error, fallback) => {
-  const detail = error?.response?.data?.detail || error?.response?.data?.member_ids;
+  const responseData = error?.response?.data;
+  const firstFieldError =
+    responseData && typeof responseData === "object"
+      ? Object.values(responseData).find((value) => typeof value === "string")
+      : undefined;
+  const detail = responseData?.detail || firstFieldError;
   throw new Error(detail || fallback);
 };
 

@@ -42,7 +42,7 @@ class MessageCreateSerializer(serializers.Serializer):
         if receiver is None and recipient is None:
             raise serializers.ValidationError({"receiver": "This field is required."})
         if receiver is not None and recipient is not None and receiver.id != recipient.id:
-            raise serializers.ValidationError({"receiver": "receiver and recipient must match."})
+            raise serializers.ValidationError({"receiver": "Receiver and recipient must match."})
 
         selected_recipient = receiver or recipient
         if selected_recipient.id == request.user.id:

@@ -59,13 +59,19 @@ function SubmitReport() {
   return (
     <form onSubmit={handleSubmit}>
       <h2>Submit Weekly Report</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
+      <div aria-live="polite">
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        {success && <p style={{ color: "green" }}>{success}</p>}
+      </div>
 
       {/* image files */}
-      {images.map((img, i) => (
-        <p key={i}>{img.name}</p>
-      ))}
+      {images.length > 0 && (
+        <ul aria-label="Uploaded images">
+          {images.map((img, i) => (
+            <li key={i}>{img.name}</li>
+          ))}
+        </ul>
+      )}
 
       <input
         placeholder="Cell ID"
@@ -112,7 +118,7 @@ function SubmitReport() {
         onChange={(e) => setImages([...e.target.files])}
       />
 
-      <button type="submit" disabled={submitting}>
+      <button type="submit" disabled={submitting} aria-busy={submitting}>
         {submitting ? "Submitting..." : "Submit"}
       </button>
     </form>
