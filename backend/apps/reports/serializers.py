@@ -12,13 +12,19 @@ class ReportImageSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "uploaded_at"]
 
 
+class ReportUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "first_name", "last_name", "role"]
+
+
 class ReportCommentSerializer(serializers.ModelSerializer):
-    author_username = serializers.CharField(source="author.username", read_only=True)
+    author = ReportUserSerializer(read_only=True)
 
     class Meta:
         model = ReportComment
-        fields = ["id", "author", "author_username", "comment", "created_at"]
-        read_only_fields = ["id", "author", "author_username", "created_at"]
+        fields = ["id", "author", "comment", "created_at"]
+        read_only_fields = ["id", "author", "created_at"]
 
 
 class ReportActivityLogSerializer(serializers.ModelSerializer):
@@ -31,6 +37,10 @@ class ReportActivityLogSerializer(serializers.ModelSerializer):
 
 
 class CellReportSerializer(serializers.ModelSerializer):
+    author = ReportUserSerializer(source="submitted_by", read_only=True)
+    reviewer = ReportUserSerializer(source="reviewed_by", read_only=True)
+    approver = ReportUserSerializer(source="approved_by", read_only=True)
+    cell_name = serializers.CharField(source="cell.name", read_only=True)
     images = ReportImageSerializer(many=True, read_only=True)
     comments = ReportCommentSerializer(many=True, read_only=True)
     activity_logs = ReportActivityLogSerializer(many=True, read_only=True)
@@ -40,7 +50,9 @@ class CellReportSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "cell",
+            "cell_name",
             "submitted_by",
+            "author",
             "meeting_date",
             "attendance_count",
             "new_members",
@@ -48,7 +60,9 @@ class CellReportSerializer(serializers.ModelSerializer):
             "summary",
             "status",
             "reviewed_by",
+            "reviewer",
             "approved_by",
+            "approver",
             "reviewed_at",
             "approved_at",
             "created_at",
@@ -63,6 +77,10 @@ class CellReportSerializer(serializers.ModelSerializer):
             "status",
             "reviewed_by",
             "approved_by",
+            "cell_name",
+            "author",
+            "reviewer",
+            "approver",
             "reviewed_at",
             "approved_at",
             "created_at",
@@ -94,10 +112,26 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id"]
 
+    def _extract_images(self):
+        request = self.context["request"]
+        images = [*request.FILES.getlist("images"), *request.FILES.getlist("images[]")]
+        unique_images = []
+        seen = set()
+        for image in images:
+            key = (image.name, image.size)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_images.append(image)
+        return unique_images
+
     def validate(self, attrs):
         request = self.context["request"]
         user = request.user
         cell = attrs.get("cell") or getattr(self.instance, "cell", None)
+        extracted_images = self._extract_images()
+        if extracted_images and "images" not in attrs:
+            attrs["images"] = extracted_images
 
         if self.instance and self.instance.status == CellReport.Status.APPROVED:
             raise serializers.ValidationError("Approved reports cannot be edited.")

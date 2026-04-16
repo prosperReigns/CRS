@@ -83,13 +83,16 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
 
 class BulkAttendanceSerializer(serializers.Serializer):
-    member_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+    member_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False, required=False)
+    members = serializers.ListField(child=serializers.IntegerField(), allow_empty=False, required=False, write_only=True)
     date = serializers.DateField()
     service_type = serializers.ChoiceField(choices=Attendance.ServiceType.choices)
     present = serializers.BooleanField(default=True)
 
-    def validate_member_ids(self, value):
-        member_ids = list(dict.fromkeys(value))
+    def validate(self, attrs):
+        raw_member_ids = attrs.get("member_ids") or attrs.get("members") or []
+        member_ids = list(dict.fromkeys(raw_member_ids))
         if not member_ids:
-            raise serializers.ValidationError("At least one member is required.")
-        return member_ids
+            raise serializers.ValidationError({"member_ids": "At least one member is required."})
+        attrs["member_ids"] = member_ids
+        return attrs

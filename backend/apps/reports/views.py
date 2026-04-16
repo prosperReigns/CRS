@@ -26,7 +26,7 @@ def scoped_reports(user):
             "reviewed_by",
             "approved_by",
         )
-        .prefetch_related("images", "comments__author", "activity_logs")
+        .prefetch_related("images", "comments__author", "activity_logs__actor")
         .all()
     )
 

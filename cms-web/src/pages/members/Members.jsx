@@ -12,10 +12,10 @@ function Members() {
 
   const fetchMembers = async () => {
     try {
-      const res = await getMembers();
-      setMembers(res.data);
+      const data = await getMembers();
+      setMembers(data);
     } catch (err) {
-      setError("Failed to load members.");
+      setError(err.message || "Failed to load members.");
     } finally {
       setLoading(false);
     }

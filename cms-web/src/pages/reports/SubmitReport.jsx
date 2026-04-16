@@ -12,15 +12,21 @@ function SubmitReport() {
   });
 
   const [images, setImages] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
 
     if (images.length < 1) {
-      alert("At least one image is required");
+      setError("At least one image is required.");
       return;
     }
 
+    setSubmitting(true);
     const formData = new FormData();
 
     Object.keys(form).forEach((key) => {
@@ -28,60 +34,83 @@ function SubmitReport() {
     });
 
     images.forEach((img) => {
-      formData.append("images", img);
+      formData.append("images[]", img);
     });
 
-    
     try {
       await createReport(formData);
-      alert("Report submitted successfully");
+      setSuccess("Report submitted successfully.");
+      setForm({
+        cell: "",
+        meeting_date: "",
+        attendance_count: "",
+        new_members: "",
+        offering_amount: "",
+        summary: "",
+      });
+      setImages([]);
     } catch (err) {
-      console.error(err);
-      alert("Error submitting report");
+      setError(err.message || "Error submitting report.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <h2>Submit Weekly Report</h2>
+      <div aria-live="polite">
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        {success && <p style={{ color: "green" }}>{success}</p>}
+      </div>
 
-        {/* image preview */}
-        {images.map((img, i) => (
-        <img key={i} src={URL.createObjectURL(img)} width="100" />
-        ))}
+      {/* image files */}
+      {images.length > 0 && (
+        <ul aria-label="Uploaded images">
+          {images.map((img, i) => (
+            <li key={i}>{img.name}</li>
+          ))}
+        </ul>
+      )}
 
       <input
         placeholder="Cell ID"
+        value={form.cell}
         onChange={(e) => setForm({ ...form, cell: e.target.value })}
       />
 
       <input
         type="date"
+        value={form.meeting_date}
         onChange={(e) => setForm({ ...form, meeting_date: e.target.value })}
       />
 
       <input
         placeholder="Attendance"
         type="number"
+        value={form.attendance_count}
         onChange={(e) => setForm({ ...form, attendance_count: e.target.value })}
       />
 
       <input
         placeholder="New Members"
         type="number"
+        value={form.new_members}
         onChange={(e) => setForm({ ...form, new_members: e.target.value })}
       />
 
       <input
         placeholder="Offering"
         type="number"
+        value={form.offering_amount}
         onChange={(e) => setForm({ ...form, offering_amount: e.target.value })}
       />
 
-      <textarea
-        placeholder="Summary"
-        onChange={(e) => setForm({ ...form, summary: e.target.value })}
-      />
+        <textarea
+          placeholder="Summary"
+          value={form.summary}
+          onChange={(e) => setForm({ ...form, summary: e.target.value })}
+        />
 
       <input
         type="file"
@@ -89,7 +118,9 @@ function SubmitReport() {
         onChange={(e) => setImages([...e.target.files])}
       />
 
-      <button type="submit">Submit</button>
+      <button type="submit" disabled={submitting} aria-busy={submitting}>
+        {submitting ? "Submitting..." : "Submit"}
+      </button>
     </form>
   );
 }

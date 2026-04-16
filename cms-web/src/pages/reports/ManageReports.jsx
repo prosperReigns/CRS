@@ -14,14 +14,14 @@ function ManageReports() {
 
   const fetchReports = async () => {
     try {
-      const res = await getReports();
-      setReports(res.data);
+      const data = await getReports();
+      setReports(data);
       if (selectedReport) {
-        const updated = res.data.find((r) => r.id === selectedReport.id);
+        const updated = data.find((r) => r.id === selectedReport.id);
         setSelectedReport(updated || null);
       }
     } catch (err) {
-      setError("Failed to load reports.");
+      setError(err.message || "Failed to load reports.");
     } finally {
       setLoading(false);
     }

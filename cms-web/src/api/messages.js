@@ -1,10 +1,40 @@
 import API from "./axios";
 
-export const getMessages = () =>
-  API.get("communication/messages/");
+const toList = (payload) => (Array.isArray(payload) ? payload : payload?.results || []);
+const resolveReceiver = (data) => data.receiver ?? data.recipient;
 
-export const getConversations = () =>
-  API.get("communication/messages/conversations/");
+const unwrapError = (error, fallback) => {
+  const detail = error?.response?.data?.detail;
+  throw new Error(detail || fallback);
+};
 
-export const sendMessage = (data) =>
-  API.post("communication/messages/", data);
+export const getMessages = async () => {
+  try {
+    const response = await API.get("communication/messages/");
+    return toList(response.data);
+  } catch (error) {
+    unwrapError(error, "Failed to load messages.");
+  }
+};
+
+export const getConversations = async () => {
+  try {
+    const response = await API.get("communication/messages/conversations/");
+    return toList(response.data);
+  } catch (error) {
+    unwrapError(error, "Failed to load conversations.");
+  }
+};
+
+export const sendMessage = async (data) => {
+  try {
+    const payload = {
+      content: data.content,
+      receiver: resolveReceiver(data),
+    };
+    const response = await API.post("communication/messages/", payload);
+    return response.data;
+  } catch (error) {
+    unwrapError(error, "Failed to send message.");
+  }
+};

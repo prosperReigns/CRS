@@ -117,6 +117,7 @@ function App() {
                 "fellowship_leader",
                 "cell_leader",
                 "teacher",
+                "member",
               ]}
             >
               <MainLayout>
