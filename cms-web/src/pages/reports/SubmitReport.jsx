@@ -24,11 +24,9 @@ function SubmitReport() {
     getMembers()
       .then((data) => {
         setMembers(data);
-        if (!form.cell) {
-          const firstCellId = data.find((member) => member.cell)?.cell;
-          if (firstCellId) {
-            setForm((prev) => ({ ...prev, cell: String(firstCellId) }));
-          }
+        const firstCellId = data.find((member) => member.cell)?.cell;
+        if (firstCellId) {
+          setForm((prev) => (prev.cell ? prev : { ...prev, cell: String(firstCellId) }));
         }
       })
       .catch((err) => setError(err.message || "Failed to load members."));
