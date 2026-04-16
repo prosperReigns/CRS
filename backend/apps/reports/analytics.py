@@ -154,7 +154,6 @@ class DashboardAnalyticsView(APIView):
                 "offering_total": float(reports_summary["offering_total"] or 0),
                 "souls_won": souls_total,
                 "attendance_trend": attendance_trend,
-                "service_attendance": service_attendance,
                 "services": service_attendance,
                 "daily_total_attendance": daily_total_attendance,
                 "offering_trend": offering_trend,

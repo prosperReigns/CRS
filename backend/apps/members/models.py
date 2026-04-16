@@ -127,5 +127,6 @@ class Attendance(models.Model):
         ]
 
     def __str__(self):
-        service_label = self.service.name if self.service_id else self.service_type
+        service = getattr(self, "service", None)
+        service_label = service.name if service else self.service_type
         return f"{self.member.user.username} - {self.date} ({service_label})"
