@@ -17,6 +17,8 @@ const getStatusColor = (status) => {
 
 function MyReports() {
   const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchReports();
@@ -27,9 +29,15 @@ function MyReports() {
       const res = await getMyReports();
       setReports(res.data);
     } catch (err) {
-      console.error(err);
+      setError("Failed to load reports.");
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) return <p>Loading reports...</p>;
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
+  if (reports.length === 0) return <p>No reports submitted yet.</p>;
 
   return (
     <div>

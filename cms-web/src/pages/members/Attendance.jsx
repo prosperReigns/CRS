@@ -5,14 +5,22 @@ function Attendance() {
   const [members, setMembers] = useState([]);
   const [selected, setSelected] = useState([]);
   const [date, setDate] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchMembers();
   }, []);
 
   const fetchMembers = async () => {
-    const res = await getMembers();
-    setMembers(res.data);
+    try {
+      const res = await getMembers();
+      setMembers(res.data);
+    } catch (err) {
+      setError("Failed to load members.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleMember = (id) => {
@@ -33,7 +41,8 @@ function Attendance() {
       await markAttendance({
         date,
         service_type: "sunday",
-        members: selected,
+        member_ids: selected,
+        present: true,
       });
 
       alert("Attendance recorded");
@@ -47,6 +56,8 @@ function Attendance() {
   return (
     <div>
       <h2>Mark Attendance</h2>
+      {loading && <p>Loading members...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
       <input type="date" onChange={(e) => setDate(e.target.value)} />
 
@@ -58,7 +69,7 @@ function Attendance() {
               checked={selected.includes(m.id)}
               onChange={() => toggleMember(m.id)}
             />
-            {m.user}
+            {m.user?.username}
           </label>
         </div>
       ))}

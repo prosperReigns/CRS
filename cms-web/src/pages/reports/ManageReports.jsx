@@ -5,14 +5,26 @@ import ReportDetail from "./ReportDetail";
 function ManageReports() {
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchReports();
   }, []);
 
   const fetchReports = async () => {
-    const res = await getReports();
-    setReports(res.data);
+    try {
+      const res = await getReports();
+      setReports(res.data);
+      if (selectedReport) {
+        const updated = res.data.find((r) => r.id === selectedReport.id);
+        setSelectedReport(updated || null);
+      }
+    } catch (err) {
+      setError("Failed to load reports.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -20,6 +32,9 @@ function ManageReports() {
       {/* LEFT: LIST */}
       <div style={{ width: "40%" }}>
         <h2>Reports</h2>
+        {loading && <p>Loading reports...</p>}
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        {!loading && !error && reports.length === 0 && <p>No reports found.</p>}
 
         {reports.map((r) => (
           <div

@@ -13,6 +13,7 @@ import {
 
 function Dashboard() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -23,10 +24,11 @@ function Dashboard() {
       const res = await getDashboardData();
       setData(res.data);
     } catch (err) {
-      console.error(err);
+      setError("Failed to load dashboard data.");
     }
   };
 
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
   if (!data) return <p>Loading...</p>;
 
   return (
@@ -48,8 +50,7 @@ function Dashboard() {
       </div>
 
       <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-        <div>Attendance (Last Week): {data.attendance_last_week}</div>
-        <div>Offering: ₦{data.offering}</div>
+        <div>Offering: ₦{data.offering_total}</div>
         <div>Souls Won: {data.souls_won}</div>
       </div>
 
@@ -57,7 +58,7 @@ function Dashboard() {
       <h3>Attendance Trend</h3>
       <LineChart width={600} height={300} data={data.attendance_trend}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
+        <XAxis dataKey="week" />
         <YAxis />
         <Tooltip />
         <Line type="monotone" dataKey="count" />
@@ -67,7 +68,7 @@ function Dashboard() {
       <h3>Offering Trend</h3>
       <BarChart width={600} height={300} data={data.offering_trend}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="meeting_date" />
+        <XAxis dataKey="week" />
         <YAxis />
         <Tooltip />
         <Bar dataKey="total" />

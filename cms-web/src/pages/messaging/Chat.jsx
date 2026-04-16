@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { getMessages, sendMessage } from "../../api/messages";
+import { AuthContext } from "../../context/AuthContext";
 
 function Chat({ user }) {
+  const { user: currentUser } = useContext(AuthContext);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
 
@@ -18,8 +20,8 @@ function Chat({ user }) {
 
     const filtered = res.data.filter(
       (m) =>
-        m.sender === user.username ||
-        m.receiver === user.username
+        (m.sender === currentUser?.id && m.recipient === user.id) ||
+        (m.sender === user.id && m.recipient === currentUser?.id)
     );
 
     setMessages(filtered);
@@ -29,7 +31,7 @@ function Chat({ user }) {
     if (!text) return;
 
     await sendMessage({
-      receiver: user.id,
+      recipient: user.id,
       content: text,
     });
 
@@ -44,7 +46,7 @@ function Chat({ user }) {
       <div style={{ height: "400px", overflowY: "scroll" }}>
         {messages.map((m) => (
           <div key={m.id}>
-            <strong>{m.sender}</strong>: {m.content}
+            <strong>{m.sender_username}</strong>: {m.content}
           </div>
         ))}
       </div>

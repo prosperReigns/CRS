@@ -8,17 +8,18 @@ import {
   addComment,
 } from "../../api/reports";
 
-const { user } = useContext(AuthContext);
-
 function ReportDetail({ report, refresh }) {
+  const { user } = useContext(AuthContext);
   const [comment, setComment] = useState("");
 
   const handleApprove = async () => {
+    if (!window.confirm("Approve this report?")) return;
     await approveReport(report.id);
     refresh();
   };
 
   const handleReject = async () => {
+    if (!window.confirm("Reject this report?")) return;
     await rejectReport(report.id);
     refresh();
   };
@@ -53,11 +54,11 @@ function ReportDetail({ report, refresh }) {
 
       {/* 🔄 Actions */}
       <h3>Actions</h3>
-      {user.role === "fellowship_leader" && (
+      {user?.role === "fellowship_leader" && report.status === "pending" && (
         <button onClick={handleReview}>Review</button>
       )}
 
-      {user.role === "pastor" && (
+      {user?.role === "pastor" && report.status === "reviewed" && (
         <>
           <button onClick={handleApprove}>Approve</button>
           <button onClick={handleReject}>Reject</button>
@@ -68,7 +69,7 @@ function ReportDetail({ report, refresh }) {
       <h3>Comments</h3>
       {report.comments?.map((c) => (
         <div key={c.id} style={{ borderBottom: "1px solid #ccc" }}>
-          <p><strong>{c.author}</strong></p>
+          <p><strong>{c.author_username}</strong></p>
           <p>{c.comment}</p>
         </div>
       ))}

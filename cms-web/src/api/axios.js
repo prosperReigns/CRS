@@ -4,13 +4,44 @@ const API = axios.create({
   baseURL: "http://127.0.0.1:8000/api/",
 });
 
-// Attach token later
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const access = localStorage.getItem("accessToken");
+  if (access) {
+    config.headers.Authorization = `Bearer ${access}`;
   }
   return config;
 });
+
+API.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    const status = error.response?.status;
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    if (status === 401 && refreshToken && !originalRequest?._retry) {
+      originalRequest._retry = true;
+      try {
+        const response = await axios.post("http://127.0.0.1:8000/api/auth/refresh/", {
+          refresh: refreshToken,
+        });
+        const newAccess = response.data.access;
+        localStorage.setItem("accessToken", newAccess);
+        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+        return API(originalRequest);
+      } catch (refreshError) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default API;
