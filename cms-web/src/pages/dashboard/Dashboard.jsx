@@ -10,6 +10,9 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorState from "../../components/ui/ErrorState";
+import EmptyState from "../../components/ui/EmptyState";
 
 function Dashboard() {
   const [data, setData] = useState(null);
@@ -28,8 +31,8 @@ function Dashboard() {
     }
   };
 
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
-  if (!data) return <p>Loading...</p>;
+  if (error) return <ErrorState error={error} />;
+  if (!data) return <LoadingState />;
 
   return (
     <div>
@@ -79,6 +82,17 @@ function Dashboard() {
       <p>Total: {data.report_stats.total}</p>
       <p>Approved: {data.report_stats.approved}</p>
       <p>Rejected: {data.report_stats.rejected}</p>
+
+      <h3>Top Cells</h3>
+      {data.top_cells?.length ? (
+        data.top_cells.map((cell) => (
+          <p key={cell.cell_id}>
+            {cell.cell_name} - Attendance: {cell.total_attendance}, Offering: ₦{cell.total_offering}
+          </p>
+        ))
+      ) : (
+        <EmptyState label="No top cell data yet." />
+      )}
     </div>
   );
 }

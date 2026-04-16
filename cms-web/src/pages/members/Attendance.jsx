@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { getMembers, markAttendance } from "../../api/members";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorState from "../../components/ui/ErrorState";
+import EmptyState from "../../components/ui/EmptyState";
 
 function Attendance() {
   const [members, setMembers] = useState([]);
@@ -8,6 +11,7 @@ function Attendance() {
   const [serviceType, setServiceType] = useState("sunday");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     fetchMembers();
@@ -33,8 +37,10 @@ function Attendance() {
   };
 
   const handleSubmit = async () => {
+    setError("");
+    setSuccess("");
     if (!date) {
-      alert("Select a date");
+      setError("Select a date.");
       return;
     }
 
@@ -45,19 +51,19 @@ function Attendance() {
         members: selected,
         present: true,
       });
-
-      alert("Attendance recorded");
+      setSuccess("Attendance recorded successfully.");
       setSelected([]);
     } catch (err) {
-      alert(err.message || "Error recording attendance");
+      setError(err.message || "Error recording attendance");
     }
   };
 
   return (
     <div>
       <h2>Mark Attendance</h2>
-      {loading && <p>Loading members...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {loading && <LoadingState label="Loading members..." />}
+      <ErrorState error={error} />
+      {success && <p style={{ color: "green" }}>{success}</p>}
 
       <input type="date" onChange={(e) => setDate(e.target.value)} />
       <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}>
@@ -66,6 +72,7 @@ function Attendance() {
         <option value="special">Special Service</option>
       </select>
 
+      {!loading && members.length === 0 && <EmptyState label="No members available for attendance." />}
       {members.map((m) => (
         <div key={m.id}>
           <label>
@@ -79,7 +86,9 @@ function Attendance() {
         </div>
       ))}
 
-      <button onClick={handleSubmit}>Submit Attendance</button>
+      <button type="button" onClick={handleSubmit} disabled={loading || members.length === 0 || selected.length === 0}>
+        Submit Attendance
+      </button>
     </div>
   );
 }

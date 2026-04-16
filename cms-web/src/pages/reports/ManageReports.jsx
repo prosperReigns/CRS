@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { getReports } from "../../api/reports";
 import ReportDetail from "./ReportDetail";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorState from "../../components/ui/ErrorState";
+import EmptyState from "../../components/ui/EmptyState";
 
 function ManageReports() {
   const [reports, setReports] = useState([]);
@@ -32,9 +35,9 @@ function ManageReports() {
       {/* LEFT: LIST */}
       <div style={{ width: "40%" }}>
         <h2>Reports</h2>
-        {loading && <p>Loading reports...</p>}
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        {!loading && !error && reports.length === 0 && <p>No reports found.</p>}
+        {loading && <LoadingState label="Loading reports..." />}
+        <ErrorState error={error} />
+        {!loading && !error && reports.length === 0 && <EmptyState label="No reports found." />}
 
         {reports.map((r) => (
           <div
@@ -47,7 +50,7 @@ function ManageReports() {
               cursor: "pointer",
             }}
           >
-            <p>{r.cell}</p>
+            <p>{r.cell_name || r.cell}</p>
             <p>{r.meeting_date}</p>
             <p>Status: {r.status}</p>
           </div>
@@ -56,9 +59,7 @@ function ManageReports() {
 
       {/* RIGHT: DETAILS */}
       <div style={{ width: "60%" }}>
-        {selectedReport && (
-          <ReportDetail report={selectedReport} refresh={fetchReports} />
-        )}
+        {selectedReport ? <ReportDetail report={selectedReport} refresh={fetchReports} /> : <EmptyState label="Select a report" />}
       </div>
     </div>
   );

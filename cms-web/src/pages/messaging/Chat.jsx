@@ -1,34 +1,37 @@
 import { useContext, useEffect, useState } from "react";
-import { getMessages, sendMessage } from "../../api/messages";
+import { getConversationThread, sendMessage } from "../../api/messages";
 import { AuthContext } from "../../context/AuthContext";
+import ErrorState from "../../components/ui/ErrorState";
+import LoadingState from "../../components/ui/LoadingState";
+import EmptyState from "../../components/ui/EmptyState";
 
 function Chat({ user }) {
   const { user: currentUser } = useContext(AuthContext);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchMessages();
-
-    const interval = setInterval(fetchMessages, 3000); // polling
-
-    return () => clearInterval(interval);
-  }, [user]);
+    let interval;
+    if (currentUser) {
+      fetchMessages();
+      interval = setInterval(fetchMessages, 3000); // polling
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [user, currentUser]);
 
   const fetchMessages = async () => {
     try {
-      const data = await getMessages();
-      const filtered = data.filter(
-        (m) =>
-          (m.sender?.id === currentUser?.id && m.receiver?.id === user.id) ||
-          (m.sender?.id === user.id && m.receiver?.id === currentUser?.id)
-      );
-
-      setMessages(filtered);
+      const data = await getConversationThread(user.id);
+      setMessages(data);
       setError("");
     } catch (err) {
       setError(err.message || "Failed to load chat messages.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -36,7 +39,7 @@ function Chat({ user }) {
     if (!text) return;
     try {
       await sendMessage({
-        receiver: user.id,
+        recipient: user.id,
         content: text,
       });
 
@@ -50,14 +53,17 @@ function Chat({ user }) {
   return (
     <div>
       <h3>Chat with {user.username}</h3>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <ErrorState error={error} />
 
       <div style={{ height: "400px", overflowY: "scroll" }}>
-        {messages.map((m) => (
-          <div key={m.id}>
-            <strong>{m.sender?.username}</strong>: {m.content}
-          </div>
-        ))}
+        {loading && <LoadingState label="Loading chat..." />}
+        {!loading && messages.length === 0 && <EmptyState label="No messages in this conversation yet." />}
+        {!loading &&
+          messages.map((m) => (
+            <div key={m.id}>
+              <strong>{m.sender?.username}</strong>: {m.content}
+            </div>
+          ))}
       </div>
 
       <input

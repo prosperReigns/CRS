@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { getMembers } from "../../api/members";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorState from "../../components/ui/ErrorState";
+import EmptyState from "../../components/ui/EmptyState";
 
 function Members() {
   const [members, setMembers] = useState([]);
@@ -21,9 +24,9 @@ function Members() {
     }
   };
 
-  if (loading) return <p>Loading members...</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
-  if (members.length === 0) return <p>No members found.</p>;
+  if (loading) return <LoadingState label="Loading members..." />;
+  if (error) return <ErrorState error={error} />;
+  if (members.length === 0) return <EmptyState label="No members found." />;
 
   return (
     <div>

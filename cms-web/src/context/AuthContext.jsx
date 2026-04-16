@@ -1,6 +1,6 @@
 import { createContext, useEffect, useMemo, useState } from "react";
 import { getCurrentUser } from "../api/auth";
-import { registerUnauthorizedHandler } from "../api/axios";
+import { registerUnauthorizedHandler } from "../api/client";
 
 export const AuthContext = createContext();
 
@@ -33,7 +33,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken || user) return;
+    if (!accessToken) {
+      if (user) logout();
+      return;
+    }
+    if (user) return;
 
     getCurrentUser()
       .then((currentUser) => {

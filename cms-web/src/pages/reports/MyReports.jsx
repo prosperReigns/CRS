@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { getMyReports } from "../../api/reports";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorState from "../../components/ui/ErrorState";
+import EmptyState from "../../components/ui/EmptyState";
 
 
 const getStatusColor = (status) => {
@@ -35,9 +38,9 @@ function MyReports() {
     }
   };
 
-  if (loading) return <p>Loading reports...</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
-  if (reports.length === 0) return <p>No reports submitted yet.</p>;
+  if (loading) return <LoadingState label="Loading reports..." />;
+  if (error) return <ErrorState error={error} />;
+  if (reports.length === 0) return <EmptyState label="No reports submitted yet." />;
 
   return (
     <div>
