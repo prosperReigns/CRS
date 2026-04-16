@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from rest_framework.permissions import SAFE_METHODS
 
 
 class FrozenUserRestrictionMiddleware:
@@ -23,7 +24,7 @@ class FrozenUserRestrictionMiddleware:
             and user
             and user.is_authenticated
             and getattr(user, "is_frozen", False)
-            and request.method not in {"GET", "HEAD", "OPTIONS"}
+            and request.method not in SAFE_METHODS
             and path not in self.ALLOWED_PATHS
             and not (path == self.REPORT_SUBMISSION_PATH and request.method == "POST")
         ):

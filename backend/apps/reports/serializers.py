@@ -189,10 +189,12 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         if len(attendees) < 1:
             raise serializers.ValidationError({"attendees": "At least one attendee is required."})
 
-        invalid_attendees = [attendee.id for attendee in attendees if attendee.cell_id != cell.id]
-        if invalid_attendees:
+        attendee_ids = list({attendee.id for attendee in attendees})
+        valid_attendee_ids = set(MemberProfile.objects.filter(id__in=attendee_ids, cell=cell).values_list("id", flat=True))
+        invalid_attendee_ids = sorted(set(attendee_ids) - valid_attendee_ids)
+        if invalid_attendee_ids:
             raise serializers.ValidationError(
-                {"attendees": f"All attendees must belong to the selected cell. Invalid IDs: {invalid_attendees}"}
+                {"attendees": f"All attendees must belong to the selected cell. Invalid IDs: {invalid_attendee_ids}"}
             )
 
         if cell and meeting_date:

@@ -3,6 +3,8 @@ import { createReport } from "../../api/reports";
 import { getMembers } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
 
+const ATTENDEE_LIST_MAX_HEIGHT = "220px";
+
 function SubmitReport() {
   const { user } = useContext(AuthContext);
   const [form, setForm] = useState({
@@ -24,9 +26,9 @@ function SubmitReport() {
     getMembers()
       .then((data) => {
         setMembers(data);
-        const firstCellId = data.find((member) => member.cell)?.cell;
-        if (firstCellId) {
-          setForm((prev) => (prev.cell ? prev : { ...prev, cell: String(firstCellId) }));
+        const defaultCellId = data.find((member) => member.cell)?.cell;
+        if (defaultCellId) {
+          setForm((prev) => (prev.cell ? prev : { ...prev, cell: String(defaultCellId) }));
         }
       })
       .catch((err) => setError(err.message || "Failed to load members."));
@@ -41,10 +43,12 @@ function SubmitReport() {
     const query = attendeeSearch.trim().toLowerCase();
     if (!query) return members;
     return members.filter((member) => {
-      const fullName = `${member.user?.first_name || ""} ${member.user?.last_name || ""}`.trim().toLowerCase();
+      const fullNameLower = `${member.user?.first_name || ""} ${member.user?.last_name || ""}`
+        .trim()
+        .toLowerCase();
       return (
         member.user?.username?.toLowerCase().includes(query) ||
-        fullName.includes(query) ||
+        fullNameLower.includes(query) ||
         member.cell_name?.toLowerCase().includes(query)
       );
     });
@@ -145,7 +149,7 @@ function SubmitReport() {
       <p>
         Selected attendees: <strong>{attendees.length}</strong>
       </p>
-      <div style={{ maxHeight: "220px", overflow: "auto", border: "1px solid #ddd", padding: "8px" }}>
+      <div style={{ maxHeight: ATTENDEE_LIST_MAX_HEIGHT, overflow: "auto", border: "1px solid #ddd", padding: "8px" }}>
         {visibleMembers.map((member) => (
           <label key={member.id} style={{ display: "block", marginBottom: "6px" }}>
             <input

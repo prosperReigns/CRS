@@ -18,14 +18,14 @@ WEEKDAY_MAP = {
 
 def _last_meeting_datetime(cell, now):
     current = timezone.localtime(now)
-    timezone_obj = timezone.get_current_timezone()
     weekday = WEEKDAY_MAP.get(cell.meeting_day)
     if weekday is None or cell.meeting_time is None:
         return None
 
     days_since = (current.weekday() - weekday) % 7
     meeting_date = current.date() - timedelta(days=days_since)
-    meeting_dt = timezone.make_aware(datetime.combine(meeting_date, cell.meeting_time), timezone_obj)
+    scheduled_datetime = datetime.combine(meeting_date, cell.meeting_time)
+    meeting_dt = timezone.make_aware(scheduled_datetime, timezone.get_current_timezone())
     if meeting_dt > current:
         meeting_dt -= timedelta(days=7)
     return meeting_dt
