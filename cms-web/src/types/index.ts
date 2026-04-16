@@ -69,9 +69,7 @@ export interface Message {
 }
 
 export interface AnalyticsResponse {
-  members: { total: number; active: number; inactive: number };
   member_activity_stats: { total: number; active: number; inactive: number };
-  reports: { total: number; approved: number; rejected: number };
   report_stats: { total: number; approved: number; rejected: number };
   offering_total: number;
   souls_won: number;

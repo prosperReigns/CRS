@@ -5,6 +5,7 @@ function Attendance() {
   const [members, setMembers] = useState([]);
   const [selected, setSelected] = useState([]);
   const [date, setDate] = useState("");
+  const [serviceType, setServiceType] = useState("sunday");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -40,7 +41,7 @@ function Attendance() {
     try {
       await markAttendance({
         date,
-        service_type: "sunday",
+        service_type: serviceType,
         member_ids: selected,
         present: true,
       });
@@ -60,6 +61,11 @@ function Attendance() {
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       <input type="date" onChange={(e) => setDate(e.target.value)} />
+      <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}>
+        <option value="sunday">Sunday Service</option>
+        <option value="midweek">Midweek Service</option>
+        <option value="special">Special Service</option>
+      </select>
 
       {members.map((m) => (
         <div key={m.id}>

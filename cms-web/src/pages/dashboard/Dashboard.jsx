@@ -43,10 +43,10 @@ function Dashboard() {
           borderRadius: "10px"
         }}>
           <h4>Total Members</h4>
-          <p>{data.members.total}</p>
+          <p>{data.member_activity_stats.total}</p>
         </div>
-        <div>Active: {data.members.active}</div>
-        <div>Inactive: {data.members.inactive}</div>
+        <div>Active: {data.member_activity_stats.active}</div>
+        <div>Inactive: {data.member_activity_stats.inactive}</div>
       </div>
 
       <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
@@ -76,9 +76,9 @@ function Dashboard() {
 
       {/* 🧾 Reports Summary */}
       <h3>Reports</h3>
-      <p>Total: {data.reports.total}</p>
-      <p>Approved: {data.reports.approved}</p>
-      <p>Rejected: {data.reports.rejected}</p>
+      <p>Total: {data.report_stats.total}</p>
+      <p>Approved: {data.report_stats.approved}</p>
+      <p>Rejected: {data.report_stats.rejected}</p>
     </div>
   );
 }

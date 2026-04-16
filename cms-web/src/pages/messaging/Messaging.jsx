@@ -32,13 +32,13 @@ function Messaging() {
         {error && <p style={{ color: "red" }}>{error}</p>}
         {!loading && !error && users.length === 0 && <p>No conversations yet.</p>}
 
-        {users.map((u) => (
+        {users.filter((u) => u?.partner?.id).map((u) => (
           <div
             key={u.partner.id}
             onClick={() => setActiveUser(u.partner)}
             style={{ padding: "10px", cursor: "pointer" }}
           >
-            {u.partner.username} ({u.partner.role})
+            {u.partner?.username} ({u.partner?.role})
           </div>
         ))}
       </div>
