@@ -13,12 +13,14 @@ function Chat({ user }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) return;
-    fetchMessages();
-
-    const interval = setInterval(fetchMessages, 3000); // polling
-
-    return () => clearInterval(interval);
+    let interval;
+    if (currentUser) {
+      fetchMessages();
+      interval = setInterval(fetchMessages, 3000); // polling
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [user, currentUser]);
 
   const fetchMessages = async () => {

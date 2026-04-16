@@ -38,13 +38,15 @@ class MessageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="thread")
     def thread(self, request):
         partner_id = request.query_params.get("user_id")
+        limit = request.query_params.get("limit", "100")
         if not partner_id:
             return Response({"detail": "user_id query parameter is required."}, status=400)
 
         try:
             partner_id = int(partner_id)
+            limit = max(1, min(int(limit), 200))
         except (TypeError, ValueError):
-            return Response({"detail": "user_id must be a valid integer."}, status=400)
+            return Response({"detail": "user_id and limit must be valid integers."}, status=400)
 
         user = request.user
         queryset = (
@@ -54,7 +56,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 | Q(sender_id=partner_id, recipient_id=user.id)
             )
             .order_by("-created_at")
-        )
+        )[:limit]
         serializer = MessageSerializer(queryset, many=True)
         return Response(serializer.data)
 

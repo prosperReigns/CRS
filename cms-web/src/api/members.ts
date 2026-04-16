@@ -14,12 +14,19 @@ export const getMembers = async (): Promise<Member[]> => {
 
 export const markAttendance = async (data: AttendanceBulkRequest): Promise<AttendanceBulkResponse> => {
   try {
-    const payload = {
+    const payload: {
+      date: string;
+      service_type: AttendanceBulkRequest["service_type"];
+      members: number[];
+      present?: boolean;
+    } = {
       date: data.date,
       service_type: data.service_type,
       members: data.members || [],
-      present: typeof data.present === "boolean" ? data.present : true,
     };
+    if (typeof data.present === "boolean") {
+      payload.present = data.present;
+    }
     const response = await API.post<AttendanceBulkResponse>("members/attendance/bulk-mark/", payload);
     return response.data;
   } catch (error) {

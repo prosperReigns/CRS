@@ -86,7 +86,7 @@ function Attendance() {
         </div>
       ))}
 
-      <button onClick={handleSubmit} disabled={loading || members.length === 0 || selected.length === 0}>
+      <button type="button" onClick={handleSubmit} disabled={loading || members.length === 0 || selected.length === 0}>
         Submit Attendance
       </button>
     </div>

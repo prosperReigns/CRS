@@ -1,6 +1,10 @@
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, AxiosHeaders, type AxiosRequestConfig } from "axios";
 
 type UnauthorizedHandler = (() => void) | null;
+
+interface RetryableAxiosRequestConfig extends AxiosRequestConfig {
+  _retry?: boolean;
+}
 
 export interface ApiErrorShape {
   detail?: string;
@@ -43,10 +47,9 @@ export const getErrorMessage = (error: unknown, fallback: string): string => {
 API.interceptors.request.use((config) => {
   const access = localStorage.getItem("accessToken");
   if (access) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${access}`,
-    };
+    const headers = AxiosHeaders.from(config.headers || {});
+    headers.set("Authorization", `Bearer ${access}`);
+    config.headers = headers;
   }
   return config;
 });
@@ -54,7 +57,7 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
+    const originalRequest = error.config as RetryableAxiosRequestConfig | undefined;
     const status = error.response?.status;
     const refreshToken = localStorage.getItem("refreshToken");
 
@@ -70,10 +73,11 @@ API.interceptors.response.use(
         const newAccess = (response.data as { access: string }).access;
         localStorage.setItem("accessToken", newAccess);
         if (originalRequest) {
-          originalRequest.headers = {
-            ...originalRequest.headers,
-            Authorization: `Bearer ${newAccess}`,
-          };
+          const headers = AxiosHeaders.from(
+            (originalRequest.headers || {}) as AxiosHeaders | Record<string, string>
+          );
+          headers.set("Authorization", `Bearer ${newAccess}`);
+          originalRequest.headers = headers;
           return API(originalRequest);
         }
       } catch (refreshError) {
