@@ -66,7 +66,7 @@ function Login() {
 
         <button
           type="submit"
-          className="mt-6 w-full rounded-lg bg-brand-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
+          className="mt-6 w-full rounded-lg bg-slate-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
           disabled={loading}
         >
           {loading ? "Logging in..." : "Login"}

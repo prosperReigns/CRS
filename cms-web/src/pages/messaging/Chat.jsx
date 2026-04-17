@@ -76,7 +76,7 @@ function Chat({ user }) {
 
         <button
           onClick={handleSend}
-          className="rounded-lg bg-brand-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700"
+          className="rounded-lg bg-slate-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700"
         >
           Send
         </button>

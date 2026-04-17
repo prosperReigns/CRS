@@ -212,7 +212,7 @@ function SubmitReport() {
 
       <button
         type="submit"
-        className="w-full rounded-lg bg-brand-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
+        className="w-full rounded-lg bg-slate-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
         disabled={submitting}
         aria-busy={submitting}
       >
