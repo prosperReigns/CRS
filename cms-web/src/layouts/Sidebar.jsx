@@ -9,7 +9,7 @@ function Sidebar() {
 
   const canManageReports = ["pastor", "staff", "fellowship_leader"].includes(user.role);
   const canViewDashboard = ["pastor", "staff"].includes(user.role);
-  const canManageMembers = ["pastor", "staff", "fellowship_leader"].includes(user.role);
+  const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
     user.role
   );

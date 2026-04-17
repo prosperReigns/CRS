@@ -44,7 +44,10 @@ function ManageReports() {
             onClick={() => setSelectedReport(r)}
             className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50 p-3 transition hover:border-brand-300 hover:bg-brand-50"
           >
-            <p className="font-semibold text-slate-800">{r.cell_name || r.cell}</p>
+            <p className="font-semibold text-slate-800">
+              {r.fellowship_name ? `${r.fellowship_name} / ` : ""}
+              {r.cell_name || r.cell}
+            </p>
             <p className="text-sm text-slate-600">{r.meeting_date}</p>
             <p className="text-sm capitalize text-slate-600">Status: {r.status}</p>
           </div>
