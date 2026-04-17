@@ -8,7 +8,8 @@ import { AuthContext } from "../../context/AuthContext";
 
 function Members() {
   const { user } = useContext(AuthContext);
-  const canAssignLeadership = ["pastor", "fellowship_leader"].includes(user?.role);
+  const canAssignLeadership = ["pastor", "staff", "fellowship_leader"].includes(user?.role);
+  const canAssignFellowshipLeaderRole = ["pastor", "staff"].includes(user?.role);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -98,7 +99,7 @@ function Members() {
                 className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
               >
                 <option value="">Select role</option>
-                <option value="fellowship_leader">Fellowship Leader</option>
+                {canAssignFellowshipLeaderRole && <option value="fellowship_leader">Fellowship Leader</option>}
                 <option value="cell_leader">Cell Leader</option>
               </select>
               <button
