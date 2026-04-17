@@ -15,7 +15,7 @@ import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
 
-function Dashboard() {
+function Dashboard({ title = "Dashboard" }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
@@ -37,7 +37,7 @@ function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
+      <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
