@@ -15,6 +15,7 @@ import Structure from "./pages/structure/Structure";
 const memberManagerRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
 const messagingRoles = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
 const structureRoles = ["pastor", "staff", "fellowship_leader"];
+const leadershipProfileRoles = ["fellowship_leader", "cell_leader"];
 
 function ProtectedLayoutRoute({ allowedRoles, children }) {
   return (
@@ -36,6 +37,15 @@ function App() {
           element={
             <ProtectedLayoutRoute allowedRoles={["pastor", "staff"]}>
               <Dashboard />
+            </ProtectedLayoutRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedLayoutRoute allowedRoles={leadershipProfileRoles}>
+              <Dashboard title="Profile" />
             </ProtectedLayoutRoute>
           }
         />
