@@ -9,7 +9,7 @@ function Sidebar() {
 
   const canManageReports = ["pastor", "staff", "fellowship_leader"].includes(user.role);
   const canViewDashboard = ["pastor", "staff"].includes(user.role);
-  const canViewProfile = ["fellowship_leader", "cell_leader"].includes(user.role);
+  const canViewSettings = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageStructure = ["pastor", "staff", "fellowship_leader"].includes(user.role);
   const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
@@ -31,9 +31,9 @@ function Sidebar() {
         </NavLink>
       )}
 
-      {canViewProfile && (
-        <NavLink className={navClassName} to="/profile">
-          Profile
+      {canViewSettings && (
+        <NavLink className={navClassName} to="/settings">
+          Settings
         </NavLink>
       )}
 
