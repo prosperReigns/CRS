@@ -1,21 +1,24 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from "../api/notifications";
 
 const POLL_INTERVAL_MS = 15000;
+const NOTIFICATION_BUTTON_ID = "header-notification-menu-button";
 
 function Header() {
   const { user, logout } = useContext(AuthContext);
   const [notifications, setNotifications] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationError, setNotificationError] = useState("");
+  const notificationMenuRef = useRef(null);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.is_read).length,
     [notifications]
   );
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
     try {
       const data = await getNotifications();
       setNotifications(data);
@@ -23,13 +26,40 @@ function Header() {
     } catch (error) {
       setNotificationError(error.message || "Failed to load notifications.");
     }
-  };
+  }, [user]);
 
   useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
     fetchNotifications();
     const interval = setInterval(fetchNotifications, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchNotifications, user]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (event) => {
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen]);
 
   const handleMarkRead = async (notificationId) => {
     try {
@@ -65,9 +95,13 @@ function Header() {
           </span>
         )}
 
-        <div className="relative ml-auto">
+        <div ref={notificationMenuRef} className="relative ml-auto">
           <button
             onClick={() => setMenuOpen((prev) => !prev)}
+            id={NOTIFICATION_BUTTON_ID}
+            aria-label="Notifications menu"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
             className="relative rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
           >
             Notifications
@@ -79,12 +113,16 @@ function Header() {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 mt-2 max-h-96 w-96 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+            <div
+              role="menu"
+              aria-labelledby={NOTIFICATION_BUTTON_ID}
+              className="absolute right-0 mt-2 max-h-96 w-96 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+            >
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-800">Recent notifications</p>
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-xs font-medium text-brand-600 transition hover:text-brand-700"
+                  className="text-xs font-medium text-brand-600 transition hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={unreadCount === 0}
                 >
                   Mark all read
@@ -95,6 +133,8 @@ function Header() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
+                  role="menuitem"
+                  tabIndex={0}
                   className={`rounded-md border p-2 text-sm ${
                     notification.is_read
                       ? "border-slate-200 bg-slate-50 text-slate-600"
