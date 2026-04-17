@@ -105,7 +105,7 @@ function Members() {
                 type="button"
                 onClick={() => handleAssignRole(m)}
                 disabled={assigningMemberId === m.id}
-                className="w-full rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-lg bg-slate-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {assigningMemberId === m.id ? "Assigning..." : "Assign Role"}
               </button>
