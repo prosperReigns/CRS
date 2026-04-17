@@ -1,13 +1,20 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { getMembers } from "../../api/members";
+import { assignLeadershipRole } from "../../api/users";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
+import { AuthContext } from "../../context/AuthContext";
 
 function Members() {
+  const { user } = useContext(AuthContext);
+  const canAssignLeadership = ["pastor", "fellowship_leader"].includes(user?.role);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [assigningMemberId, setAssigningMemberId] = useState(null);
+  const [selectedRoles, setSelectedRoles] = useState({});
 
   useEffect(() => {
     fetchMembers();
@@ -17,10 +24,31 @@ function Members() {
     try {
       const data = await getMembers();
       setMembers(data);
+      setSelectedRoles(
+        data.reduce((accumulator, member) => {
+          accumulator[member.id] = member.user?.role === "fellowship_leader" ? "fellowship_leader" : "cell_leader";
+          return accumulator;
+        }, {})
+      );
     } catch (err) {
       setError(err.message || "Failed to load members.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssignRole = async (member) => {
+    if (!member.user?.id) return;
+    setActionError("");
+    setAssigningMemberId(member.id);
+    try {
+      const role = selectedRoles[member.id] || "cell_leader";
+      await assignLeadershipRole(member.user.id, role);
+      await fetchMembers();
+    } catch (err) {
+      setActionError(err.message || "Failed to assign leadership role.");
+    } finally {
+      setAssigningMemberId(null);
     }
   };
 
@@ -31,6 +59,7 @@ function Members() {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold text-slate-900">Members</h2>
+      {actionError && <ErrorState error={actionError} />}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {members.map((m) => (
@@ -47,6 +76,32 @@ function Members() {
           <p className="text-sm text-slate-600">Baptised: {m.is_baptised ? "Yes" : "No"}</p>
           <p className="text-sm text-slate-600">Foundation: {m.foundation_completed ? "Yes" : "No"}</p>
           <p className="text-sm text-slate-600">Souls Won: {m.souls_won}</p>
+          {canAssignLeadership && m.user?.id && (
+            <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Assign Leadership Role</p>
+              <select
+                value={selectedRoles[m.id] || "cell_leader"}
+                onChange={(event) =>
+                  setSelectedRoles((prev) => ({
+                    ...prev,
+                    [m.id]: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+              >
+                <option value="fellowship_leader">Fellowship Leader</option>
+                <option value="cell_leader">Cell Leader</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => handleAssignRole(m)}
+                disabled={assigningMemberId === m.id}
+                className="w-full rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {assigningMemberId === m.id ? "Assigning..." : "Assign Role"}
+              </button>
+            </div>
+          )}
         </div>
       ))}
       </div>

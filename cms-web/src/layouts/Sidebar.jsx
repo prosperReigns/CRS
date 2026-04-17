@@ -10,6 +10,7 @@ function Sidebar() {
   const canManageReports = ["pastor", "staff", "fellowship_leader"].includes(user.role);
   const canViewDashboard = ["pastor", "staff"].includes(user.role);
   const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
+  const canManageStructure = ["pastor", "staff", "fellowship_leader"].includes(user.role);
   const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
     user.role
   );
@@ -50,6 +51,11 @@ function Sidebar() {
 
       {canManageMembers && !isFrozen && (
         <div className="space-y-1">
+          {canManageStructure && (
+            <NavLink className={navClassName} to="/structure">
+              Structure
+            </NavLink>
+          )}
           <NavLink className={navClassName} to="/members">
             Members
           </NavLink>
