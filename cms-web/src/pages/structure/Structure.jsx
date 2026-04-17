@@ -6,7 +6,15 @@ import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
 
-const meetingDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const meetingDays = [
+  { value: "monday", label: "Monday" },
+  { value: "tuesday", label: "Tuesday" },
+  { value: "wednesday", label: "Wednesday" },
+  { value: "thursday", label: "Thursday" },
+  { value: "friday", label: "Friday" },
+  { value: "saturday", label: "Saturday" },
+  { value: "sunday", label: "Sunday" },
+];
 
 function Structure() {
   const { user } = useContext(AuthContext);
@@ -184,8 +192,8 @@ function Structure() {
                 required
               >
                 {meetingDays.map((day) => (
-                  <option key={day} value={day}>
-                    {day.charAt(0).toUpperCase() + day.slice(1)}
+                  <option key={day.value} value={day.value}>
+                    {day.label}
                   </option>
                 ))}
               </select>

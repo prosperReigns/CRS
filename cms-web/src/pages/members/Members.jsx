@@ -25,9 +25,13 @@ function Members() {
       const data = await getMembers();
       setMembers(data);
       setSelectedRoles(
-        data.reduce((accumulator, member) => {
-          accumulator[member.id] = member.user?.role === "fellowship_leader" ? "fellowship_leader" : "cell_leader";
-          return accumulator;
+        data.reduce((acc, member) => {
+          const existingRole = member.user?.role;
+          acc[member.id] =
+            existingRole === "fellowship_leader" || existingRole === "cell_leader"
+              ? existingRole
+              : "";
+          return acc;
         }, {})
       );
     } catch (err) {
@@ -42,7 +46,11 @@ function Members() {
     setActionError("");
     setAssigningMemberId(member.id);
     try {
-      const role = selectedRoles[member.id] || "cell_leader";
+      const role = selectedRoles[member.id];
+      if (!role) {
+        setActionError("Please select a leadership role first.");
+        return;
+      }
       await assignLeadershipRole(member.user.id, role);
       await fetchMembers();
     } catch (err) {
@@ -80,7 +88,7 @@ function Members() {
             <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Assign Leadership Role</p>
               <select
-                value={selectedRoles[m.id] || "cell_leader"}
+                value={selectedRoles[m.id] || ""}
                 onChange={(event) =>
                   setSelectedRoles((prev) => ({
                     ...prev,
@@ -89,6 +97,7 @@ function Members() {
                 }
                 className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
               >
+                <option value="">Select role</option>
                 <option value="fellowship_leader">Fellowship Leader</option>
                 <option value="cell_leader">Cell Leader</option>
               </select>

@@ -61,7 +61,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return
         raise PermissionDenied(f"You are not allowed to create users with the '{role}' role.")
 
-    def _validate_role_assignment(self, acting_user, target_user, role):
+    def _enforce_role_assignment_rules(self, acting_user, target_user, role):
         allowed_target_roles = {
             User.Role.MEMBER,
             User.Role.FELLOWSHIP_LEADER,
@@ -72,7 +72,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if role not in assignable_roles:
             raise PermissionDenied("You can only assign fellowship leader or cell leader roles.")
         if target_user.role not in allowed_target_roles:
-            raise PermissionDenied("Only member records can be assigned to leadership roles.")
+            raise PermissionDenied("You can only change roles for members and existing leaders.")
         if acting_user.role in {User.Role.PASTOR, User.Role.STAFF}:
             return
         if acting_user.role == User.Role.FELLOWSHIP_LEADER:
@@ -92,9 +92,9 @@ class UserViewSet(viewsets.ModelViewSet):
 
         submitted_fields = set(serializer.validated_data.keys())
         if submitted_fields != {"role"}:
-            raise PermissionDenied("Fellowship leaders can only assign member leadership roles.")
+            raise PermissionDenied("Fellowship leaders can only update the user role field.")
 
-        self._validate_role_assignment(acting_user, target_user, serializer.validated_data["role"])
+        self._enforce_role_assignment_rules(acting_user, target_user, serializer.validated_data["role"])
         serializer.save()
 
     @action(detail=False, methods=["get"])
