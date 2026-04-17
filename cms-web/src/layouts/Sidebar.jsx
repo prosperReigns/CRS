@@ -31,12 +31,6 @@ function Sidebar() {
         </NavLink>
       )}
 
-      {canViewSettings && (
-        <NavLink className={navClassName} to="/settings">
-          Settings
-        </NavLink>
-      )}
-
       {user.role === "cell_leader" && (
         <div className="space-y-1">
           <NavLink className={navClassName} to="/reports/submit">
@@ -75,6 +69,12 @@ function Sidebar() {
       {canMessage && !isFrozen && (
         <NavLink className={navClassName} to="/messages">
           Messages
+        </NavLink>
+      )}
+
+      {canViewSettings && (
+        <NavLink className={navClassName} to="/settings">
+          Settings
         </NavLink>
       )}
     </aside>
