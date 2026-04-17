@@ -4,6 +4,8 @@ from django.contrib.auth.password_validation import validate_password
 
 from .models import User
 
+MISSING = object()
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,7 +67,7 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
 
 
 class UserSettingsSerializer(serializers.ModelSerializer):
-    cell_meeting_venue = serializers.CharField(required=False, allow_blank=False)
+    cell_meeting_venue = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = User
@@ -102,19 +104,33 @@ class UserSettingsSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if "cell_meeting_venue" in attrs:
+            if not attrs["cell_meeting_venue"].strip():
+                raise serializers.ValidationError({"cell_meeting_venue": "Cell meeting venue cannot be empty."})
             cell = self._get_linked_cell(self.instance)
             if not cell:
                 raise serializers.ValidationError({"cell_meeting_venue": "No linked cell found for this account."})
         return attrs
 
+    def validate_profile_picture(self, value):
+        if not value:
+            return value
+        content_type = getattr(value, "content_type", "")
+        if content_type and not content_type.startswith("image/"):
+            raise serializers.ValidationError("Profile picture must be a valid image file.")
+        max_size = 5 * 1024 * 1024
+        if value.size > max_size:
+            raise serializers.ValidationError("Profile picture size must not exceed 5MB.")
+        return value
+
     def update(self, instance, validated_data):
-        cell_meeting_venue = validated_data.pop("cell_meeting_venue", serializers.empty)
+        cell_meeting_venue = validated_data.pop("cell_meeting_venue", MISSING)
         updated_user = super().update(instance, validated_data)
 
-        if cell_meeting_venue is not serializers.empty:
+        if cell_meeting_venue is not MISSING:
             cell = self._get_linked_cell(updated_user)
-            if cell and cell.venue != cell_meeting_venue:
-                cell.venue = cell_meeting_venue
+            normalized_venue = cell_meeting_venue.strip()
+            if cell and normalized_venue and cell.venue != normalized_venue:
+                cell.venue = normalized_venue
                 cell.save(update_fields=["venue"])
 
         return updated_user

@@ -1,8 +1,11 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { changePassword, getUserSettings, updateUserSettings } from "../../api/settings";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
+
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024;
 
 function Settings() {
   const { user, setUser } = useContext(AuthContext);
@@ -27,28 +30,8 @@ function Settings() {
     new_password: "",
     confirm_password: "",
   });
-  const [profilePictureUrl, setProfilePictureUrl] = useState("");
 
-  const picturePreview = useMemo(() => {
-    if (selectedPicture) {
-      return URL.createObjectURL(selectedPicture);
-    }
-    return profilePictureUrl;
-  }, [selectedPicture, profilePictureUrl]);
-
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (picturePreview && selectedPicture) {
-        URL.revokeObjectURL(picturePreview);
-      }
-    };
-  }, [picturePreview, selectedPicture]);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -61,13 +44,16 @@ function Settings() {
         bio: settings.bio || "",
         cell_meeting_venue: settings.cell_meeting_venue || "",
       });
-      setProfilePictureUrl(settings.profile_picture || "");
     } catch (err) {
       setError(err.message || "Failed to load settings.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const handleProfileSubmit = async (event) => {
     event.preventDefault();
@@ -87,7 +73,6 @@ function Settings() {
       const nextUser = { ...user, ...updated };
       localStorage.setItem("user", JSON.stringify(nextUser));
       setUser(nextUser);
-      setProfilePictureUrl(updated.profile_picture || "");
       setSelectedPicture(null);
       setSuccess("Settings updated successfully.");
     } catch (err) {
@@ -95,6 +80,26 @@ function Settings() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleProfilePictureChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setSelectedPicture(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Profile picture must be an image file.");
+      setSelectedPicture(null);
+      return;
+    }
+    if (file.size > MAX_PROFILE_PICTURE_SIZE) {
+      setError("Profile picture size must not exceed 5MB.");
+      setSelectedPicture(null);
+      return;
+    }
+    setError("");
+    setSelectedPicture(file);
   };
 
   const handlePasswordSubmit = async (event) => {
@@ -129,14 +134,10 @@ function Settings() {
       <form onSubmit={handleProfileSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">Profile</h3>
 
-        {picturePreview && (
-          <img src={picturePreview} alt="Profile preview" className="h-24 w-24 rounded-full border border-slate-200 object-cover" />
-        )}
-
         <input
           type="file"
           accept="image/*"
-          onChange={(event) => setSelectedPicture(event.target.files?.[0] || null)}
+          onChange={handleProfilePictureChange}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
 
@@ -216,7 +217,7 @@ function Settings() {
           onChange={(event) => setPasswordForm((prev) => ({ ...prev, new_password: event.target.value }))}
           placeholder="New password"
           required
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
         <input
@@ -225,7 +226,7 @@ function Settings() {
           onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirm_password: event.target.value }))}
           placeholder="Confirm new password"
           required
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
         <button
