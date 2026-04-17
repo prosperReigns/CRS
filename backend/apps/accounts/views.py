@@ -115,7 +115,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=False, methods=["get", "patch"], url_path="settings")
-    def settings(self, request):
+    def user_settings(self, request):
         if request.user.role not in self.settings_roles:
             raise PermissionDenied("You are not allowed to access account settings.")
 
