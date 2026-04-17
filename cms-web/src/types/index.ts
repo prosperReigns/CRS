@@ -52,6 +52,7 @@ export interface Report {
   id: number;
   cell: number;
   cell_name: string;
+   fellowship_name?: string;
   submitted_by: number;
   author: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
   meeting_date: string;

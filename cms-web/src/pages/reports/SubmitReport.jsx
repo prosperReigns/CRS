@@ -37,6 +37,16 @@ function SubmitReport() {
     [members, attendees]
   );
 
+  const availableCells = useMemo(() => {
+    const uniqueCells = new Map();
+    members.forEach((member) => {
+      if (member.cell && member.cell_name && !uniqueCells.has(member.cell)) {
+        uniqueCells.set(member.cell, { id: member.cell, name: member.cell_name });
+      }
+    });
+    return Array.from(uniqueCells.values());
+  }, [members]);
+
   const visibleMembers = useMemo(() => {
     const query = attendeeSearch.trim().toLowerCase();
     if (!query) return members;
@@ -124,13 +134,23 @@ function SubmitReport() {
         </ul>
       )}
 
-      <input
-        placeholder="Cell ID"
-        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-        value={form.cell}
-        onChange={(e) => setForm({ ...form, cell: e.target.value })}
-        required
-      />
+      <label className="block space-y-1">
+        <span className="text-sm font-medium text-slate-700">Cell</span>
+        <select
+          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          value={form.cell}
+          onChange={(e) => setForm({ ...form, cell: e.target.value })}
+          required
+          disabled={availableCells.length <= 1}
+        >
+          <option value="">Select a cell</option>
+          {availableCells.map((cell) => (
+            <option key={cell.id} value={cell.id}>
+              {cell.name}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <input
         type="date"

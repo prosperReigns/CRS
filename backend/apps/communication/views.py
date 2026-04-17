@@ -7,7 +7,14 @@ from rest_framework.response import Response
 
 from .models import Announcement, Message, Notification
 from .permissions import AnnouncementPermission, MessagePermission, NotificationPermission
-from .serializers import AnnouncementSerializer, MessageCreateSerializer, MessageSerializer, NotificationSerializer
+from .serializers import (
+    AnnouncementSerializer,
+    MessageCreateSerializer,
+    MessageRecipientSerializer,
+    MessageSerializer,
+    NotificationSerializer,
+    get_allowed_recipients,
+)
 
 User = get_user_model()
 
@@ -105,6 +112,12 @@ class MessageViewSet(viewsets.ModelViewSet):
             )
 
         return Response(data)
+
+    @action(detail=False, methods=["get"], url_path="recipients")
+    def recipients(self, request):
+        recipients = get_allowed_recipients(request.user).order_by("username")
+        serializer = MessageRecipientSerializer(recipients, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="mark-read")
     def mark_read(self, request, pk=None):

@@ -52,6 +52,7 @@ class CellReportSerializer(serializers.ModelSerializer):
     reviewer = ReportUserSerializer(source="reviewed_by", read_only=True)
     approver = ReportUserSerializer(source="approved_by", read_only=True)
     cell_name = serializers.CharField(source="cell.name", read_only=True)
+    fellowship_name = serializers.CharField(source="cell.fellowship.name", read_only=True)
     service_name = serializers.CharField(source="service.name", read_only=True)
     attendees = ReportAttendeeSerializer(many=True, read_only=True)
     images = ReportImageSerializer(many=True, read_only=True)
@@ -64,6 +65,7 @@ class CellReportSerializer(serializers.ModelSerializer):
             "id",
             "cell",
             "cell_name",
+            "fellowship_name",
             "submitted_by",
             "author",
             "meeting_date",
@@ -94,6 +96,7 @@ class CellReportSerializer(serializers.ModelSerializer):
             "reviewed_by",
             "approved_by",
             "cell_name",
+            "fellowship_name",
             "author",
             "reviewer",
             "approver",

@@ -1,5 +1,5 @@
 import API, { getErrorMessage } from "./client";
-import type { Conversation, Message } from "../types";
+import type { Conversation, Message, User } from "../types";
 import { toList } from "./utils";
 
 export interface SendMessagePayload {
@@ -31,6 +31,17 @@ export const getConversations = async (): Promise<Conversation[]> => {
     return toList(response.data);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to load conversations."));
+  }
+};
+
+export const getMessageRecipients = async (): Promise<Pick<User, "id" | "username" | "first_name" | "last_name" | "role">[]> => {
+  try {
+    const response = await API.get<Pick<User, "id" | "username" | "first_name" | "last_name" | "role">[]>(
+      "communication/messages/recipients/"
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to load available recipients."));
   }
 };
 
