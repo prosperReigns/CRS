@@ -11,6 +11,7 @@ function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationError, setNotificationError] = useState("");
   const notificationMenuRef = useRef(null);
+  const notificationButtonRef = useRef(null);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.is_read).length,
@@ -42,7 +43,11 @@ function Header() {
     if (!menuOpen) return;
 
     const handleClickOutside = (event) => {
-      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target)) {
+      const clickedOutsideMenu =
+        notificationMenuRef.current && !notificationMenuRef.current.contains(event.target);
+      const clickedOutsideButton =
+        notificationButtonRef.current && !notificationButtonRef.current.contains(event.target);
+      if (clickedOutsideMenu && clickedOutsideButton) {
         setMenuOpen(false);
       }
     };
@@ -98,6 +103,7 @@ function Header() {
         <div ref={notificationMenuRef} className="relative ml-auto">
           <button
             onClick={() => setMenuOpen((prev) => !prev)}
+            ref={notificationButtonRef}
             id={NOTIFICATION_BUTTON_ID}
             aria-label="Notifications menu"
             aria-haspopup="menu"
@@ -135,6 +141,12 @@ function Header() {
                   key={notification.id}
                   role="menuitem"
                   tabIndex={0}
+                  onKeyDown={(event) => {
+                    if ((event.key === "Enter" || event.key === " ") && !notification.is_read) {
+                      event.preventDefault();
+                      handleMarkRead(notification.id);
+                    }
+                  }}
                   className={`rounded-md border p-2 text-sm ${
                     notification.is_read
                       ? "border-slate-200 bg-slate-50 text-slate-600"
