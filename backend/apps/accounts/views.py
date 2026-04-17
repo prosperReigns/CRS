@@ -8,7 +8,13 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import User
 from .permissions import IsPastorOrStaff, IsSelfOrPastorOrStaff
-from .serializers import LoginTokenSerializer, UserCreateSerializer, UserSerializer
+from .serializers import (
+    ChangePasswordSerializer,
+    LoginTokenSerializer,
+    UserCreateSerializer,
+    UserSerializer,
+    UserSettingsSerializer,
+)
 
 
 class LoginView(TokenObtainPairView):
@@ -17,6 +23,12 @@ class LoginView(TokenObtainPairView):
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("username")
+    settings_roles = {
+        User.Role.PASTOR,
+        User.Role.STAFF,
+        User.Role.FELLOWSHIP_LEADER,
+        User.Role.CELL_LEADER,
+    }
 
     def get_permissions(self):
         if self.action == "destroy":
@@ -101,3 +113,32 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+    @action(detail=False, methods=["get", "patch"], url_path="settings")
+    def settings(self, request):
+        if request.user.role not in self.settings_roles:
+            raise PermissionDenied("You are not allowed to access account settings.")
+
+        if request.method.lower() == "get":
+            serializer = UserSettingsSerializer(request.user, context={"request": request})
+            return Response(serializer.data)
+
+        serializer = UserSettingsSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["post"], url_path="change-password")
+    def change_password(self, request):
+        if request.user.role not in self.settings_roles:
+            raise PermissionDenied("You are not allowed to change password from this page.")
+
+        serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Password updated successfully."})

@@ -18,6 +18,8 @@ class User(AbstractUser):
         db_index=True,
     )
     phone = models.CharField(max_length=20, blank=True)
+    bio = models.TextField(blank=True)
+    profile_picture = models.ImageField(upload_to="profiles/", blank=True, null=True)
     is_frozen = models.BooleanField(default=False)
 
     class Meta:

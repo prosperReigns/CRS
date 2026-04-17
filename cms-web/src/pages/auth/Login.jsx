@@ -17,9 +17,9 @@ function Login() {
       case "staff":
         return "/dashboard";
       case "fellowship_leader":
-        return "/profile";
+        return "/settings";
       case "cell_leader":
-        return "/profile";
+        return "/settings";
       case "teacher":
       case "member":
         return "/messages";
