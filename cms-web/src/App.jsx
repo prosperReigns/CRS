@@ -11,11 +11,12 @@ import Members from "./pages/members/Members";
 import Attendance from "./pages/members/Attendance";
 import Messaging from "./pages/messaging/Messaging";
 import Structure from "./pages/structure/Structure";
+import Settings from "./pages/settings/Settings";
 
 const memberManagerRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
 const messagingRoles = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
 const structureRoles = ["pastor", "staff", "fellowship_leader"];
-const leadershipProfileRoles = ["fellowship_leader", "cell_leader"];
+const settingsRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
 
 function ProtectedLayoutRoute({ allowedRoles, children }) {
   return (
@@ -42,13 +43,15 @@ function App() {
         />
 
         <Route
-          path="/profile"
+          path="/settings"
           element={
-            <ProtectedLayoutRoute allowedRoles={leadershipProfileRoles}>
-              <Dashboard title="Profile" />
+            <ProtectedLayoutRoute allowedRoles={settingsRoles}>
+              <Settings />
             </ProtectedLayoutRoute>
           }
         />
+
+        <Route path="/profile" element={<Navigate to="/settings" replace />} />
 
         <Route
           path="/reports/submit"
