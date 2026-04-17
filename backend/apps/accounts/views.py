@@ -88,6 +88,8 @@ class UserViewSet(viewsets.ModelViewSet):
         if acting_user.role in {User.Role.PASTOR, User.Role.STAFF}:
             return
         if acting_user.role == User.Role.FELLOWSHIP_LEADER:
+            if role != User.Role.CELL_LEADER:
+                raise PermissionDenied("Fellowship leaders can only assign the cell leader role.")
             return
         raise PermissionDenied("You are not allowed to assign leadership roles.")
 
