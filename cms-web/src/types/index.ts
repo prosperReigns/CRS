@@ -121,6 +121,15 @@ export interface Conversation {
   unread_count: number;
 }
 
+export interface NotificationItem {
+  id: number;
+  title: string;
+  message: string;
+  category: "report" | "message" | "announcement";
+  is_read: boolean;
+  created_at: string;
+}
+
 export interface AnalyticsResponse {
   members: { total: number; active: number; inactive: number };
   report_stats: { total: number; approved: number; rejected: number };
