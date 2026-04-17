@@ -10,9 +10,11 @@ import MyReports from "./pages/reports/MyReports";
 import Members from "./pages/members/Members";
 import Attendance from "./pages/members/Attendance";
 import Messaging from "./pages/messaging/Messaging";
+import Structure from "./pages/structure/Structure";
 
 const memberManagerRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
 const messagingRoles = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
+const structureRoles = ["pastor", "staff", "fellowship_leader"];
 
 function ProtectedLayoutRoute({ allowedRoles, children }) {
   return (
@@ -79,6 +81,15 @@ function App() {
           element={
             <ProtectedLayoutRoute allowedRoles={memberManagerRoles}>
               <Attendance />
+            </ProtectedLayoutRoute>
+          }
+        />
+
+        <Route
+          path="/structure"
+          element={
+            <ProtectedLayoutRoute allowedRoles={structureRoles}>
+              <Structure />
             </ProtectedLayoutRoute>
           }
         />

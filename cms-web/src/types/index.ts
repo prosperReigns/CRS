@@ -26,6 +26,25 @@ export interface Member {
   updated_at: string;
 }
 
+export interface Fellowship {
+  id: number;
+  name: string;
+  leader: number | null;
+  created_at: string;
+}
+
+export interface Cell {
+  id: number;
+  name: string;
+  fellowship: number;
+  fellowship_name?: string;
+  leader: number | null;
+  meeting_day: string;
+  meeting_time: string;
+  venue: string;
+  created_at: string;
+}
+
 export interface ReportImage {
   id: number;
   image: string;
