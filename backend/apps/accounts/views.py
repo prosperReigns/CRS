@@ -19,8 +19,10 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("username")
 
     def get_permissions(self):
-        if self.action in {"update", "partial_update", "destroy"}:
+        if self.action == "destroy":
             return [IsPastorOrStaff()]
+        if self.action in {"update", "partial_update"}:
+            return [IsAuthenticated()]
         if self.action in {"list", "create"}:
             return [IsAuthenticated()]
         if self.action == "retrieve":
@@ -58,6 +60,42 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer.save()
             return
         raise PermissionDenied(f"You are not allowed to create users with the '{role}' role.")
+
+    def _enforce_role_assignment_rules(self, acting_user, target_user, role):
+        allowed_target_roles = {
+            User.Role.MEMBER,
+            User.Role.FELLOWSHIP_LEADER,
+            User.Role.CELL_LEADER,
+        }
+        assignable_roles = {User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER}
+
+        if role not in assignable_roles:
+            raise PermissionDenied("You can only assign fellowship leader or cell leader roles.")
+        if target_user.role not in allowed_target_roles:
+            raise PermissionDenied("You can only change roles for members and existing leaders.")
+        if acting_user.role in {User.Role.PASTOR, User.Role.STAFF}:
+            return
+        if acting_user.role == User.Role.FELLOWSHIP_LEADER:
+            return
+        raise PermissionDenied("You are not allowed to assign leadership roles.")
+
+    def perform_update(self, serializer):
+        acting_user = self.request.user
+        target_user = self.get_object()
+
+        if acting_user.role in {User.Role.PASTOR, User.Role.STAFF}:
+            serializer.save()
+            return
+
+        if acting_user.role != User.Role.FELLOWSHIP_LEADER:
+            raise PermissionDenied("You are not allowed to update user records.")
+
+        submitted_fields = set(serializer.validated_data.keys())
+        if submitted_fields != {"role"}:
+            raise PermissionDenied("Fellowship leaders can only update the user role field.")
+
+        self._enforce_role_assignment_rules(acting_user, target_user, serializer.validated_data["role"])
+        serializer.save()
 
     @action(detail=False, methods=["get"])
     def me(self, request):
