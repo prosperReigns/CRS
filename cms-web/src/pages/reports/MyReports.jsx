@@ -33,9 +33,6 @@ function MyReports() {
     try {
       const data = await getMyReports();
       setReports(data);
-      if (!selectedReport && data.length > 0) {
-        setSelectedReport(data[0]);
-      }
       if (selectedReport) {
         const updated = data.find((report) => report.id === selectedReport.id);
         setSelectedReport(updated || null);

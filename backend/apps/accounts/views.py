@@ -57,7 +57,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if user.role == User.Role.FELLOWSHIP_LEADER and role == User.Role.CELL_LEADER:
             serializer.save()
             return
-        raise PermissionDenied("You are not allowed to create this type of user.")
+        raise PermissionDenied(f"You are not allowed to create users with the '{role}' role.")
 
     @action(detail=False, methods=["get"])
     def me(self, request):

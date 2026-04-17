@@ -37,7 +37,7 @@ function SubmitReport() {
     [members, attendees]
   );
 
-  const availableCells = useMemo(() => {
+  const cellOptions = useMemo(() => {
     const uniqueCells = new Map();
     members.forEach((member) => {
       if (member.cell && member.cell_name && !uniqueCells.has(member.cell)) {
@@ -141,10 +141,10 @@ function SubmitReport() {
           value={form.cell}
           onChange={(e) => setForm({ ...form, cell: e.target.value })}
           required
-          disabled={availableCells.length <= 1}
+          disabled={cellOptions.length <= 1}
         >
           <option value="">Select a cell</option>
-          {availableCells.map((cell) => (
+          {cellOptions.map((cell) => (
             <option key={cell.id} value={cell.id}>
               {cell.name}
             </option>
