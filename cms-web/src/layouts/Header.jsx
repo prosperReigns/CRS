@@ -5,7 +5,7 @@ import { getNotifications, markAllNotificationsRead, markNotificationRead } from
 const POLL_INTERVAL_MS = 15000;
 const NOTIFICATION_BUTTON_ID = "header-notification-menu-button";
 
-function Header() {
+function Header({ isSidebarOpen, onSidebarToggle }) {
   const { user, logout } = useContext(AuthContext);
   const [notifications, setNotifications] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -91,6 +91,15 @@ function Header() {
   return (
     <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur md:px-6">
       <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onSidebarToggle}
+          aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          aria-expanded={isSidebarOpen}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+        >
+          {isSidebarOpen ? "Hide Menu" : "Show Menu"}
+        </button>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
           {user?.username} ({user?.role})
         </span>

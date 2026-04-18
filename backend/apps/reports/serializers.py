@@ -1,6 +1,7 @@
 from django.db import IntegrityError, transaction
 from django.db.models import Case, DateField, F, Value, When
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from apps.accounts.models import User
 from apps.members.models import MemberProfile
@@ -134,6 +135,13 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             "images",
         ]
         read_only_fields = ["id"]
+        validators = [
+            UniqueTogetherValidator(
+                queryset=CellReport.objects.exclude(status=CellReport.Status.REJECTED),
+                fields=["cell", "meeting_date"],
+                message="A report for this cell and meeting date already exists.",
+            )
+        ]
 
     def _extract_images(self):
         request = self.context["request"]
@@ -224,7 +232,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             duplicate_qs = CellReport.objects.filter(cell=cell, meeting_date=meeting_date)
             if self.instance:
                 duplicate_qs = duplicate_qs.exclude(pk=self.instance.pk)
-            if duplicate_qs.exists():
+            if duplicate_qs.exclude(status=CellReport.Status.REJECTED).exists():
                 raise serializers.ValidationError(
                     {"non_field_errors": ["A report for this cell and meeting date already exists."]}
                 )
@@ -243,6 +251,53 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         attendees = validated_data.pop("attendees", [])
         request = self.context["request"]
         cell = validated_data["cell"]
+        meeting_date = validated_data["meeting_date"]
+
+        rejected_report = (
+            CellReport.objects.select_for_update()
+            .filter(cell=cell, meeting_date=meeting_date, status=CellReport.Status.REJECTED)
+            .first()
+        )
+
+        if rejected_report:
+            rejected_report.service = validated_data.get("service")
+            rejected_report.new_members = validated_data["new_members"]
+            rejected_report.offering_amount = validated_data["offering_amount"]
+            rejected_report.summary = validated_data["summary"]
+            rejected_report.submitted_by = request.user
+            rejected_report.leader = cell.leader
+            rejected_report.status = CellReport.Status.PENDING
+            rejected_report.reviewed_by = None
+            rejected_report.reviewed_at = None
+            rejected_report.approved_by = None
+            rejected_report.approved_at = None
+            rejected_report.save(
+                update_fields=[
+                    "service",
+                    "new_members",
+                    "offering_amount",
+                    "summary",
+                    "submitted_by",
+                    "leader",
+                    "status",
+                    "reviewed_by",
+                    "reviewed_at",
+                    "approved_by",
+                    "approved_at",
+                    "updated_at",
+                ]
+            )
+
+            rejected_report.attendees.set(attendees)
+            rejected_report.sync_attendance_count(save=True)
+            self._update_last_attended(
+                meeting_date=rejected_report.meeting_date,
+                attendee_ids=[attendee.id for attendee in attendees],
+            )
+
+            rejected_report.images.all().delete()
+            ReportImage.objects.bulk_create([ReportImage(report=rejected_report, image=img) for img in images])
+            return rejected_report
 
         try:
             report = CellReport.objects.create(submitted_by=request.user, leader=cell.leader, **validated_data)
