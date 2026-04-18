@@ -5,6 +5,9 @@ import { AuthContext } from "../../context/AuthContext";
 import { inferReportTypeFromDate, REPORT_TYPE_OPTIONS } from "./reportType";
 
 function SubmitReport() {
+  const isMemberAttendeeId = (id) => typeof id === "number";
+  const isCustomAttendeeId = (id) => typeof id === "string";
+
   const { user } = useContext(AuthContext);
   const [form, setForm] = useState({
     cell: "",
@@ -85,7 +88,7 @@ function SubmitReport() {
     if (!selectedCellId) return;
     const validMemberIds = new Set(membersForSelectedCell.map((member) => member.id));
     setAttendees((prev) =>
-      prev.filter((id) => (typeof id === "number" ? validMemberIds.has(id) : true))
+      prev.filter((id) => (isMemberAttendeeId(id) ? validMemberIds.has(id) : isCustomAttendeeId(id)))
     );
     setFirstTimerAttendees((prev) => prev.filter((id) => validMemberIds.has(id)));
   }, [membersForSelectedCell, selectedCellId]);
@@ -134,7 +137,7 @@ function SubmitReport() {
     setError("");
     setSuccess("");
 
-    const selectedMemberIds = attendees.filter((id) => typeof id === "number");
+    const selectedMemberIds = attendees.filter(isMemberAttendeeId);
     const selectedCustomNames = customAttendees.filter((entry) => attendees.includes(entry.id)).map((entry) => entry.name);
 
     if (selectedMemberIds.length < 1) {

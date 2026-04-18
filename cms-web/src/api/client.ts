@@ -38,18 +38,22 @@ export const registerUnauthorizedHandler = (handler: UnauthorizedHandler) => {
 };
 
 export const getErrorMessage = (error: unknown, fallback: string): string => {
-  const extractMessage = (value: unknown): string | undefined => {
+  const seenObjects = new WeakSet<object>();
+  const extractMessage = (value: unknown, depth = 0): string | undefined => {
+    if (depth > 8) return undefined;
     if (typeof value === "string") return value;
     if (Array.isArray(value)) {
       for (const item of value) {
-        const message = extractMessage(item);
+        const message = extractMessage(item, depth + 1);
         if (message) return message;
       }
       return undefined;
     }
     if (value && typeof value === "object") {
+      if (seenObjects.has(value)) return undefined;
+      seenObjects.add(value);
       for (const nestedValue of Object.values(value)) {
-        const message = extractMessage(nestedValue);
+        const message = extractMessage(nestedValue, depth + 1);
         if (message) return message;
       }
     }
