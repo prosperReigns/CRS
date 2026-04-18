@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getMembers } from "../../api/members";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
@@ -54,8 +55,9 @@ function Members() {
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {members.map((m) => (
-        <div
+        <Link
           key={m.id}
+          to={`/members/${m.id}`}
           className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
         >
           <p className="text-lg font-semibold text-slate-900">{m.user?.username}</p>
@@ -73,7 +75,7 @@ function Members() {
           <p className="text-sm text-slate-600">Baptised: {m.is_baptised ? "Yes" : "No"}</p>
           <p className="text-sm text-slate-600">Foundation: {m.foundation_completed ? "Yes" : "No"}</p>
           <p className="text-sm text-slate-600">Souls Won: {m.souls_won}</p>
-        </div>
+        </Link>
       ))}
       </div>
     </div>

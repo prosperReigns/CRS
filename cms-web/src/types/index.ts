@@ -5,6 +5,7 @@ export interface User {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  home_address?: string | null;
   bio?: string | null;
   profile_picture?: string | null;
   role: "admin" | "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";
@@ -40,6 +41,23 @@ export interface Member {
   souls_won: number;
   join_date: string;
   last_attended: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VisitationReport {
+  id: number;
+  member: number;
+  member_name: string;
+  assigned_leader: number;
+  leader_name: string;
+  visitation_date: string;
+  visitation_time: string;
+  method_used: "calling" | "one_on_one_visitation";
+  comment: string;
+  status: "pending" | "approved";
+  approved_by: number | null;
+  approved_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -89,12 +107,15 @@ export interface Report {
   id: number;
   cell: number;
   cell_name: string;
-   fellowship_name?: string;
+  fellowship_name?: string;
   submitted_by: number;
   author: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
   meeting_date: string;
+  meeting_time?: string | null;
+  meeting_duration_minutes?: number | null;
   report_type: "week1_prayer_planning" | "week2_bible_study" | "week3_bible_study" | "week4_outreach";
   attendees: ReportAttendee[];
+  first_timer_attendees?: ReportAttendee[];
   attendance_count: number;
   attendee_names?: string;
   new_members: number;

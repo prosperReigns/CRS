@@ -56,6 +56,7 @@ class CellReportSerializer(serializers.ModelSerializer):
     fellowship_name = serializers.CharField(source="cell.fellowship.name", read_only=True)
     service_name = serializers.CharField(source="service.name", read_only=True)
     attendees = ReportAttendeeSerializer(many=True, read_only=True)
+    first_timer_attendees = ReportAttendeeSerializer(many=True, read_only=True)
     images = ReportImageSerializer(many=True, read_only=True)
     comments = ReportCommentSerializer(many=True, read_only=True)
     activity_logs = ReportActivityLogSerializer(many=True, read_only=True)
@@ -70,10 +71,13 @@ class CellReportSerializer(serializers.ModelSerializer):
             "submitted_by",
             "author",
             "meeting_date",
+            "meeting_time",
+            "meeting_duration_minutes",
             "report_type",
             "service",
             "service_name",
             "attendees",
+            "first_timer_attendees",
             "attendance_count",
             "attendee_names",
             "new_members",
@@ -117,6 +121,11 @@ class CellReportSerializer(serializers.ModelSerializer):
 
 class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
     attendees = serializers.PrimaryKeyRelatedField(queryset=MemberProfile.objects.select_related("cell"), many=True)
+    first_timer_attendees = serializers.PrimaryKeyRelatedField(
+        queryset=MemberProfile.objects.select_related("cell"),
+        many=True,
+        required=False,
+    )
     images = serializers.ListField(
         child=serializers.ImageField(),
         write_only=True,
@@ -129,9 +138,12 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             "id",
             "cell",
             "meeting_date",
+            "meeting_time",
+            "meeting_duration_minutes",
             "report_type",
             "service",
             "attendees",
+            "first_timer_attendees",
             "attendee_names",
             "new_members",
             "offering_amount",
@@ -174,6 +186,22 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         )
 
     @staticmethod
+    def _sync_first_timer_profiles(*, meeting_date, first_timer_ids):
+        if not first_timer_ids:
+            return
+        # Keep the earliest known first visit date to support correcting records
+        # when a first-timer is identified from an earlier report submission.
+        MemberProfile.objects.filter(id__in=first_timer_ids).update(
+            is_first_timer=True,
+            first_visit_date=Case(
+                When(first_visit_date__isnull=True, then=Value(meeting_date)),
+                When(first_visit_date__gt=meeting_date, then=Value(meeting_date)),
+                default=F("first_visit_date"),
+                output_field=DateField(),
+            ),
+        )
+
+    @staticmethod
     def _is_duplicate_report_error(exc):
         cause = getattr(exc, "__cause__", None)
         if cause is not None:
@@ -189,6 +217,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         user = request.user
         cell = attrs.get("cell") or getattr(self.instance, "cell", None)
         attendees = attrs.get("attendees")
+        first_timer_attendees = attrs.get("first_timer_attendees")
         meeting_date = attrs.get("meeting_date") or getattr(self.instance, "meeting_date", None)
         extracted_images = self._extract_images()
         if extracted_images and "images" not in attrs:
@@ -232,6 +261,20 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 {"attendees": f"All attendees must belong to the selected cell. Invalid IDs: {invalid_attendee_ids}"}
             )
 
+        if first_timer_attendees is None:
+            first_timer_attendees = []
+        first_timer_ids = list({attendee.id for attendee in first_timer_attendees})
+        invalid_first_timer_ids = sorted(set(first_timer_ids) - valid_attendee_ids)
+        if invalid_first_timer_ids:
+            raise serializers.ValidationError(
+                {
+                    "first_timer_attendees": (
+                        "First timer attendees must be selected from attendees in the selected cell. "
+                        f"Invalid IDs: {invalid_first_timer_ids}"
+                    )
+                }
+            )
+
         if cell and meeting_date:
             duplicate_qs = CellReport.objects.filter(cell=cell, meeting_date=meeting_date)
             if self.instance:
@@ -269,6 +312,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         images = validated_data.pop("images", [])
         attendees = validated_data.pop("attendees", [])
+        first_timer_attendees = validated_data.pop("first_timer_attendees", [])
         request = self.context["request"]
         cell = validated_data["cell"]
         meeting_date = validated_data["meeting_date"]
@@ -282,6 +326,9 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         if rejected_report:
             rejected_report.service = validated_data.get("service")
             rejected_report.report_type = validated_data.get("report_type", CellReport.infer_report_type(meeting_date))
+            rejected_report.meeting_time = validated_data.get("meeting_time")
+            rejected_report.meeting_duration_minutes = validated_data.get("meeting_duration_minutes")
+            rejected_report.attendee_names = validated_data.get("attendee_names", "")
             rejected_report.new_members = validated_data["new_members"]
             rejected_report.offering_amount = validated_data["offering_amount"]
             rejected_report.summary = validated_data["summary"]
@@ -296,6 +343,9 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 update_fields=[
                     "service",
                     "report_type",
+                    "meeting_time",
+                    "meeting_duration_minutes",
+                    "attendee_names",
                     "new_members",
                     "offering_amount",
                     "summary",
@@ -311,10 +361,15 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             )
 
             rejected_report.attendees.set(attendees)
+            rejected_report.first_timer_attendees.set(first_timer_attendees)
             rejected_report.sync_attendance_count(save=True)
             self._update_last_attended(
                 meeting_date=rejected_report.meeting_date,
                 attendee_ids=[attendee.id for attendee in attendees],
+            )
+            self._sync_first_timer_profiles(
+                meeting_date=rejected_report.meeting_date,
+                first_timer_ids=[attendee.id for attendee in first_timer_attendees],
             )
 
             rejected_report.images.all().delete()
@@ -332,10 +387,15 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
 
         if attendees:
             report.attendees.set(attendees)
+        report.first_timer_attendees.set(first_timer_attendees)
         report.sync_attendance_count(save=True)
         self._update_last_attended(
             meeting_date=report.meeting_date,
             attendee_ids=[attendee.id for attendee in attendees],
+        )
+        self._sync_first_timer_profiles(
+            meeting_date=report.meeting_date,
+            first_timer_ids=[attendee.id for attendee in first_timer_attendees],
         )
 
         ReportImage.objects.bulk_create([ReportImage(report=report, image=img) for img in images])
@@ -345,6 +405,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         images = validated_data.pop("images", None)
         attendees = validated_data.pop("attendees", None)
+        first_timer_attendees = validated_data.pop("first_timer_attendees", None)
 
         if "cell" in validated_data:
             validated_data["leader"] = validated_data["cell"].leader
@@ -366,6 +427,13 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             attendee_ids = [attendee.id for attendee in attendees]
         else:
             attendee_ids = list(instance.attendees.values_list("id", flat=True))
+
+        if first_timer_attendees is not None:
+            instance.first_timer_attendees.set(first_timer_attendees)
+            self._sync_first_timer_profiles(
+                meeting_date=instance.meeting_date,
+                first_timer_ids=[attendee.id for attendee in first_timer_attendees],
+            )
 
         instance.sync_attendance_count(save=True)
         self._update_last_attended(meeting_date=instance.meeting_date, attendee_ids=attendee_ids)

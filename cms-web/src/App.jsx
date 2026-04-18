@@ -8,10 +8,12 @@ import SubmitReport from "./pages/reports/SubmitReport";
 import ManageReports from "./pages/reports/ManageReports";
 import MyReports from "./pages/reports/MyReports";
 import Members from "./pages/members/Members";
+import MemberProfile from "./pages/members/MemberProfile";
 import Attendance from "./pages/members/Attendance";
 import AssignCellLeader from "./pages/members/AssignCellLeader";
-import FirstTimers from "./pages/members/FirstTimers";
 import Partnership from "./pages/members/Partnership";
+import Visitation from "./pages/members/Visitation";
+import VisitationReporting from "./pages/members/VisitationReporting";
 import Messaging from "./pages/messaging/Messaging";
 import Structure from "./pages/structure/Structure";
 import AssignFellowshipLeader from "./pages/structure/AssignFellowshipLeader";
@@ -102,6 +104,15 @@ function App() {
         />
 
         <Route
+          path="/members/:memberId"
+          element={
+            <ProtectedLayoutRoute allowedRoles={memberManagerRoles}>
+              <MemberProfile />
+            </ProtectedLayoutRoute>
+          }
+        />
+
+        <Route
           path="/members/assign-cell-leader"
           element={
             <ProtectedLayoutRoute allowedRoles={cellLeaderAssignmentRoles} allowedResponsibilities={["cell_ministry"]}>
@@ -141,13 +152,24 @@ function App() {
         />
 
         <Route
-          path="/first-timers"
+          path="/visitation"
           element={
             <ProtectedLayoutRoute allowedRoles={["admin", "pastor", "staff"]} allowedResponsibilities={["first_timer"]}>
-              <FirstTimers />
+              <Visitation />
             </ProtectedLayoutRoute>
           }
         />
+
+        <Route
+          path="/visitation/reporting"
+          element={
+            <ProtectedLayoutRoute allowedRoles={["fellowship_leader", "cell_leader"]}>
+              <VisitationReporting />
+            </ProtectedLayoutRoute>
+          }
+        />
+
+        <Route path="/first-timers" element={<Navigate to="/visitation" replace />} />
 
         <Route
           path="/partnership"

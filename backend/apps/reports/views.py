@@ -31,6 +31,7 @@ def scoped_reports(user):
         )
         .prefetch_related("images", "comments__author", "activity_logs__actor")
         .prefetch_related("attendees__user")
+        .prefetch_related("first_timer_attendees__user")
         .all()
     )
 

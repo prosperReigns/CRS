@@ -1,5 +1,6 @@
 from django.db import transaction
-from django.db.models import Case, DateField, F, Value, When
+from django.db.models import Case, DateField, F, Q, Value, When
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -9,7 +10,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.models import User
 from apps.accounts.responsibilities import has_staff_permission
-from .models import Attendance, ChurchService, MemberProfile, SoulWinning
+from .models import Attendance, ChurchService, MemberProfile, SoulWinning, VisitationReport
 from .permissions import AttendancePermission, MemberProfilePermission, SoulWinningPermission
 from .serializers import (
     AttendanceSerializer,
@@ -19,6 +20,7 @@ from .serializers import (
     MemberProfileSerializer,
     PartnershipUpdateSerializer,
     SoulWinningSerializer,
+    VisitationReportSerializer,
 )
 
 
@@ -84,6 +86,16 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
             "Only pastor, admin, or first timer coordinators can view first timers.",
         )
         qs = scoped_member_profiles(request.user).filter(is_first_timer=True)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="assigned-visitation-first-timers")
+    def assigned_visitation_first_timers(self, request):
+        if request.user.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER}:
+            raise PermissionDenied("Only fellowship leaders or cell leaders can view assigned visitation members.")
+        qs = scoped_member_profiles(request.user).filter(is_first_timer=True).filter(
+            Q(visitation_fellowship_leader=request.user) | Q(visitation_cell_leader=request.user)
+        )
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
@@ -233,3 +245,64 @@ class ChurchServiceListView(APIView):
     def get(self, request):
         services = ChurchService.objects.filter(is_active=True).order_by("day_of_week", "start_time", "name")
         return Response(ChurchServiceSerializer(services, many=True).data)
+
+
+class VisitationReportViewSet(viewsets.ModelViewSet):
+    serializer_class = VisitationReportSerializer
+    http_method_names = ["get", "post", "patch", "head", "options"]
+
+    def _can_approve_visitation(self, user):
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
+            return True
+        return user.role == User.Role.STAFF and has_staff_permission(user, "update_visitation")
+
+    def get_queryset(self):
+        qs = VisitationReport.objects.select_related("member", "member__user", "assigned_leader", "approved_by")
+        user = self.request.user
+        if self._can_approve_visitation(user):
+            return qs
+        if user.role in {User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER}:
+            return qs.filter(assigned_leader=user)
+        return qs.none()
+
+    def _require_leader(self, user):
+        if user.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER}:
+            raise PermissionDenied("Only fellowship leaders or cell leaders can submit visitation reports.")
+
+    def _is_assigned_member(self, user, member):
+        return member.is_first_timer and (
+            member.visitation_fellowship_leader_id == user.id or member.visitation_cell_leader_id == user.id
+        )
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        self._require_leader(user)
+        member = serializer.validated_data["member"]
+        if not self._is_assigned_member(user, member):
+            raise PermissionDenied("You can only submit visitation reports for your assigned first timers.")
+        serializer.save(assigned_leader=user)
+
+    def perform_update(self, serializer):
+        report = self.get_object()
+        if report.status == VisitationReport.Status.APPROVED:
+            raise PermissionDenied("Approved visitation reports cannot be edited.")
+        if report.assigned_leader_id != self.request.user.id:
+            raise PermissionDenied("You can only edit visitation reports you submitted.")
+        member = serializer.validated_data.get("member", report.member)
+        if not self._is_assigned_member(self.request.user, member):
+            raise PermissionDenied("You can only submit visitation reports for your assigned first timers.")
+        serializer.save()
+
+    @action(detail=True, methods=["patch"])
+    @transaction.atomic
+    def approve(self, request, pk=None):
+        if not self._can_approve_visitation(request.user):
+            raise PermissionDenied("Only first timer staff, pastors, or admins can approve visitation reports.")
+        report = self.get_object()
+        if report.status == VisitationReport.Status.APPROVED:
+            return Response({"detail": "Visitation report is already approved."}, status=status.HTTP_400_BAD_REQUEST)
+        report.status = VisitationReport.Status.APPROVED
+        report.approved_by = request.user
+        report.approved_at = timezone.now()
+        report.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+        return Response(self.get_serializer(report).data)

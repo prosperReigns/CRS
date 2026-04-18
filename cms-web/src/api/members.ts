@@ -1,5 +1,5 @@
 import API, { getErrorMessage } from "./client";
-import type { AttendanceBulkRequest, AttendanceBulkResponse, ChurchService, Member } from "../types";
+import type { AttendanceBulkRequest, AttendanceBulkResponse, ChurchService, Member, VisitationReport } from "../types";
 import { toList } from "./utils";
 
 export const getMembers = async (): Promise<Member[]> => {
@@ -8,6 +8,27 @@ export const getMembers = async (): Promise<Member[]> => {
     return toList(response.data);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to fetch members."));
+  }
+};
+
+export const getMemberProfile = async (memberId: number): Promise<Member> => {
+  try {
+    const response = await API.get<Member>(`members/profiles/${memberId}/`);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch member profile."));
+  }
+};
+
+export const updateMemberProfile = async (
+  memberId: number,
+  data: Partial<Pick<Member, "is_baptised" | "foundation_completed" | "souls_won">>
+): Promise<Member> => {
+  try {
+    const response = await API.patch<Member>(`members/profiles/${memberId}/`, data);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update member profile."));
   }
 };
 
@@ -86,5 +107,43 @@ export const updatePartnerProfile = async (
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to update partnership profile."));
+  }
+};
+
+export const getAssignedVisitationFirstTimers = async (): Promise<Member[]> => {
+  try {
+    const response = await API.get<Member[] | { results: Member[] }>("members/profiles/assigned-visitation-first-timers/");
+    return toList(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch assigned first timers."));
+  }
+};
+
+export const getVisitationReports = async (): Promise<VisitationReport[]> => {
+  try {
+    const response = await API.get<VisitationReport[] | { results: VisitationReport[] }>("members/visitation-reports/");
+    return toList(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch visitation reports."));
+  }
+};
+
+export const submitVisitationReport = async (
+  payload: Pick<VisitationReport, "member" | "visitation_date" | "visitation_time" | "method_used" | "comment">
+): Promise<VisitationReport> => {
+  try {
+    const response = await API.post<VisitationReport>("members/visitation-reports/", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to submit visitation report."));
+  }
+};
+
+export const approveVisitationReport = async (reportId: number): Promise<VisitationReport> => {
+  try {
+    const response = await API.patch<VisitationReport>(`members/visitation-reports/${reportId}/approve/`);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to approve visitation report."));
   }
 };

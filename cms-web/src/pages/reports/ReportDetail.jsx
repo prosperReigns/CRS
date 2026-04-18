@@ -83,6 +83,8 @@ function ReportDetail({ report, refresh }) {
         <p><strong>Fellowship:</strong> {report.fellowship_name || "-"}</p>
         <p><strong>Cell:</strong> {report.cell_name || report.cell}</p>
         <p><strong>Date:</strong> {report.meeting_date}</p>
+        <p><strong>Time:</strong> {report.meeting_time || "-"}</p>
+        <p><strong>Duration:</strong> {report.meeting_duration_minutes ? `${report.meeting_duration_minutes} mins` : "-"}</p>
         <p><strong>Report Type:</strong> {getReportTypeLabel(report.report_type)}</p>
         <p><strong>Attendance:</strong> {report.attendance_count}</p>
         <p>
@@ -90,6 +92,12 @@ function ReportDetail({ report, refresh }) {
         {report.attendees?.length
           ? report.attendees.map((attendee) => attendee.user?.username).join(", ")
           : "None"}
+        </p>
+        <p>
+          <strong>First Timers:</strong>{" "}
+          {report.first_timer_attendees?.length
+            ? report.first_timer_attendees.map((attendee) => attendee.user?.username).join(", ")
+            : "-"}
         </p>
         <p><strong>Offering:</strong> {report.offering_amount}</p>
         <p><strong>Attendee Names:</strong> {report.attendee_names || "-"}</p>
