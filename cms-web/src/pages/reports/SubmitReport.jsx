@@ -63,7 +63,7 @@ function SubmitReport() {
     return Array.from(uniqueCells.values());
   }, [members]);
 
-  const selectedCellId = Number(form.cell);
+  const selectedCellId = form.cell ? Number(form.cell) : null;
   const membersForSelectedCell = useMemo(() => {
     if (!selectedCellId) return [];
     return members.filter((member) => member.cell === selectedCellId);

@@ -38,9 +38,10 @@ export const registerUnauthorizedHandler = (handler: UnauthorizedHandler) => {
 };
 
 export const getErrorMessage = (error: unknown, fallback: string): string => {
+  const MAX_ERROR_EXTRACTION_DEPTH = 8;
   const seenObjects = new WeakSet<object>();
   const extractMessage = (value: unknown, depth = 0): string | undefined => {
-    if (depth > 8) return undefined;
+    if (depth > MAX_ERROR_EXTRACTION_DEPTH) return undefined;
     if (typeof value === "string") return value;
     if (Array.isArray(value)) {
       for (const item of value) {
