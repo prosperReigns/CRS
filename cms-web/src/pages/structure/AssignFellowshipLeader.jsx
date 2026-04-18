@@ -136,7 +136,7 @@ function AssignFellowshipLeader() {
           <option value="">Select member</option>
           {members.map((member) => (
             <option key={member.id} value={member.id}>
-              {member.user?.username || `Member ${member.id}`}
+              {member.user?.username || `No username (ID: ${member.id})`}
             </option>
           ))}
         </select>
@@ -173,12 +173,14 @@ function AssignFellowshipLeader() {
             value={createForm.first_name}
             onChange={(event) => setCreateForm((prev) => ({ ...prev, first_name: event.target.value }))}
             placeholder="First name"
+            required
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
           <input
             value={createForm.last_name}
             onChange={(event) => setCreateForm((prev) => ({ ...prev, last_name: event.target.value }))}
             placeholder="Last name"
+            required
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
         </div>

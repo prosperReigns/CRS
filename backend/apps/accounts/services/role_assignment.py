@@ -7,6 +7,9 @@ from apps.members.models import MemberProfile
 from apps.structure.models import Cell, Fellowship
 from ..models import User
 
+MAX_USERNAME_LENGTH = 150
+USERNAME_SEED_LIMIT = 24
+
 
 def _generate_password(length=12):
     return get_random_string(length=length)
@@ -14,18 +17,20 @@ def _generate_password(length=12):
 
 def _normalize_username_seed(value):
     seed = slugify((value or "").strip()).replace("-", "_")
-    return seed or "leader"
+    if seed:
+        return seed
+    return f"leader_{get_random_string(4).lower()}"
 
 
 def _unique_username(seed):
-    base = _normalize_username_seed(seed)[:24]
+    base = _normalize_username_seed(seed)[:USERNAME_SEED_LIMIT]
     username = base
     index = 0
 
     while User.objects.filter(username=username).exists():
         index += 1
         suffix = f"_{index}"
-        username = f"{base[: max(1, 30 - len(suffix))]}{suffix}"
+        username = f"{base[: max(1, MAX_USERNAME_LENGTH - len(suffix))]}{suffix}"
     return username
 
 
@@ -146,7 +151,7 @@ def create_leader_account(data, role, assigned_by):
             raise PermissionDenied("You can only assign cell leaders in your fellowship.")
 
     raw_username = (data.get("username") or "").strip()
-    username_seed = raw_username or data.get("email") or data.get("first_name") or f"{role}_leader"
+    username_seed = raw_username or data.get("email") or data.get("first_name") or role
     username = _unique_username(username_seed)
     temporary_password = (data.get("password") or "").strip() or _generate_password()
 
