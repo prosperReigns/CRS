@@ -413,6 +413,7 @@ function Partnership() {
                         )
                       )
                     }
+                    aria-label="Document title"
                     className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-lg font-semibold text-slate-900"
                     placeholder="Document title"
                   />
@@ -434,6 +435,7 @@ function Partnership() {
                             type="text"
                             value={activeDocument.headers?.memberName || defaultDocumentHeaders.memberName}
                             onChange={(event) => updateDocumentHeader("memberName", event.target.value)}
+                            aria-label="Edit member column header"
                             className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
                           />
                         </th>
@@ -442,6 +444,7 @@ function Partnership() {
                             type="text"
                             value={activeDocument.headers?.cellName || defaultDocumentHeaders.cellName}
                             onChange={(event) => updateDocumentHeader("cellName", event.target.value)}
+                            aria-label="Edit cell column header"
                             className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
                           />
                         </th>
@@ -450,6 +453,7 @@ function Partnership() {
                             type="text"
                             value={activeDocument.headers?.amount || defaultDocumentHeaders.amount}
                             onChange={(event) => updateDocumentHeader("amount", event.target.value)}
+                            aria-label="Edit amount column header"
                             className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
                           />
                         </th>
@@ -458,6 +462,7 @@ function Partnership() {
                             type="text"
                             value={activeDocument.headers?.category || defaultDocumentHeaders.category}
                             onChange={(event) => updateDocumentHeader("category", event.target.value)}
+                            aria-label="Edit category column header"
                             className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
                           />
                         </th>
@@ -466,6 +471,7 @@ function Partnership() {
                             type="text"
                             value={activeDocument.headers?.note || defaultDocumentHeaders.note}
                             onChange={(event) => updateDocumentHeader("note", event.target.value)}
+                            aria-label="Edit note column header"
                             className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
                           />
                         </th>
