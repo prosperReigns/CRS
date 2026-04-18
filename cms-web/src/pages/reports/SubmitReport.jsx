@@ -23,6 +23,7 @@ function SubmitReport() {
   const [customAttendees, setCustomAttendees] = useState([]);
   const [customFirstTimers, setCustomFirstTimers] = useState([]);
   const [images, setImages] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
   const customAttendeeCounter = useRef(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -48,7 +49,6 @@ function SubmitReport() {
     () => customAttendees.filter((entry) => attendees.includes(entry.id)),
     [customAttendees, attendees]
   );
-  const imagePreviewUrls = useMemo(() => images.map((img) => URL.createObjectURL(img)), [images]);
 
   const cellOptions = useMemo(() => {
     const uniqueCells = new Map();
@@ -87,10 +87,12 @@ function SubmitReport() {
   };
 
   useEffect(() => {
+    const urls = images.map((img) => URL.createObjectURL(img));
+    setImagePreviewUrls(urls);
     return () => {
-      imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+      urls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [imagePreviewUrls]);
+  }, [images]);
 
   const toggleFirstTimerAttendee = (id) => {
     if (!attendees.includes(id)) return;
@@ -202,7 +204,11 @@ function SubmitReport() {
             Add a meeting image
           </div>
         )}
+        <label className="text-sm font-medium text-slate-700" htmlFor="meeting-images-upload">
+          Upload meeting images
+        </label>
         <input
+          id="meeting-images-upload"
           type="file"
           multiple
           className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2 text-sm"
@@ -243,22 +249,27 @@ function SubmitReport() {
         required
       />
       <div className="grid gap-3 md:grid-cols-2">
-        <input
-          type="time"
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-          value={form.meeting_time}
-          onChange={(e) => setForm({ ...form, meeting_time: e.target.value })}
-          required
-        />
-        <input
-          type="number"
-          min="1"
-          placeholder="Meeting duration (minutes)"
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-          value={form.meeting_duration_minutes}
-          onChange={(e) => setForm({ ...form, meeting_duration_minutes: e.target.value })}
-          required
-        />
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-slate-700">Meeting Time</span>
+          <input
+            type="time"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+            value={form.meeting_time}
+            onChange={(e) => setForm({ ...form, meeting_time: e.target.value })}
+            required
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-slate-700">Meeting Duration (minutes)</span>
+          <input
+            type="number"
+            min="1"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+            value={form.meeting_duration_minutes}
+            onChange={(e) => setForm({ ...form, meeting_duration_minutes: e.target.value })}
+            required
+          />
+        </label>
       </div>
 
       <label className="block space-y-1">
