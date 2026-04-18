@@ -165,7 +165,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
     def _is_duplicate_report_error(exc):
         error_text = str(exc).lower()
         return "uniq_report_per_cell_per_date" in error_text or (
-            "unique" in error_text and "meeting_date" in error_text and "cell" in error_text
+            "unique constraint failed: reports_cellreport.cell_id, reports_cellreport.meeting_date" in error_text
         )
 
     def validate(self, attrs):
@@ -197,7 +197,9 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         if cell is None:
             raise serializers.ValidationError({"cell": "Cell is required."})
         if cell.leader_id is None:
-            raise serializers.ValidationError({"cell": "Selected cell must have an assigned leader."})
+            raise serializers.ValidationError(
+                {"cell": "This cell does not have an assigned leader. Please contact an administrator."}
+            )
 
         if attendees is None:
             if self.instance is None:
