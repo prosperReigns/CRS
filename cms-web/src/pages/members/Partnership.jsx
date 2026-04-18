@@ -5,6 +5,13 @@ import ErrorState from "../../components/ui/ErrorState";
 
 const partnershipLevels = ["bronze", "silver", "gold", "platinum"];
 const financialStorageKey = "crs.partnership.financial-documents.v1";
+const defaultDocumentHeaders = {
+  memberName: "Member",
+  cellName: "Cell",
+  amount: "Amount",
+  category: "Category",
+  note: "Note",
+};
 
 const createRowId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -27,6 +34,11 @@ const normalizeDocuments = (value) => {
   return value
     .map((doc) => {
       if (!doc || typeof doc !== "object") return null;
+      const headers = Object.keys(defaultDocumentHeaders).reduce((acc, key) => {
+        const nextValue = String(doc.headers?.[key] || "").trim();
+        acc[key] = nextValue || defaultDocumentHeaders[key];
+        return acc;
+      }, {});
       const rows = Array.isArray(doc.rows)
         ? doc.rows.map((row) => ({
             id: typeof row?.id === "string" ? row.id : createRowId(),
@@ -43,6 +55,7 @@ const normalizeDocuments = (value) => {
         id: typeof doc.id === "string" ? doc.id : createRowId(),
         name: String(doc.name || "Financial Document"),
         createdAt: typeof doc.createdAt === "string" ? doc.createdAt : new Date().toISOString(),
+        headers,
         rows,
       };
     })
@@ -64,6 +77,7 @@ const createDocument = (name, partners) => ({
   id: createRowId(),
   name,
   createdAt: new Date().toISOString(),
+  headers: { ...defaultDocumentHeaders },
   rows: partners.map(createRowFromPartner),
 });
 
@@ -167,7 +181,7 @@ function Partnership() {
   const handleDownloadDocument = () => {
     if (!activeDocument) return;
 
-    const headers = ["Member", "Cell", "Amount", "Category", "Note"];
+    const headers = Object.values(activeDocument.headers || defaultDocumentHeaders);
     const rows = activeDocument.rows.map((row) =>
       [row.memberName, row.cellName, row.amount, row.category, row.note].map(escapeCsvValue).join(",")
     );
@@ -237,6 +251,23 @@ function Partnership() {
     );
   };
 
+  const updateDocumentHeader = (field, value) => {
+    if (!activeDocument) return;
+    setFinancialDocuments((prev) =>
+      prev.map((doc) =>
+        doc.id === activeDocument.id
+          ? {
+              ...doc,
+              headers: {
+                ...(doc.headers || defaultDocumentHeaders),
+                [field]: value,
+              },
+            }
+          : doc
+      )
+    );
+  };
+
   if (loading) return <LoadingState label="Loading partnership members..." />;
 
   return (
@@ -286,7 +317,7 @@ function Partnership() {
                     type="button"
                     onClick={() => savePartner(partner)}
                     disabled={savingId === partner.id}
-                    className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                    className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-70"
                   >
                     {savingId === partner.id ? "Saving..." : "Save Partnership"}
                   </button>
@@ -324,7 +355,7 @@ function Partnership() {
               type="button"
               onClick={handleDeleteDocument}
               disabled={!activeDocument}
-              className="rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
             >
               Delete
             </button>
@@ -332,7 +363,7 @@ function Partnership() {
               type="button"
               onClick={handleDownloadDocument}
               disabled={!activeDocument}
-              className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
             >
               Download
             </button>
@@ -351,12 +382,12 @@ function Partnership() {
                   onClick={() => setActiveDocumentId(doc.id)}
                   className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm ${
                     doc.id === activeDocumentId
-                      ? "bg-brand-600 text-white"
+                      ? "bg-slate-700 text-white"
                       : "bg-white text-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   <p className="font-medium">{doc.name}</p>
-                  <p className={`text-xs ${doc.id === activeDocumentId ? "text-brand-100" : "text-slate-500"}`}>
+                  <p className={`text-xs ${doc.id === activeDocumentId ? "text-slate-200" : "text-slate-500"}`}>
                     {new Date(doc.createdAt).toLocaleDateString()}
                   </p>
                 </button>
@@ -372,7 +403,19 @@ function Partnership() {
             ) : (
               <>
                 <div className="flex items-center justify-between">
-                  <h4 className="text-lg font-semibold text-slate-900">{activeDocument.name}</h4>
+                  <input
+                    type="text"
+                    value={activeDocument.name}
+                    onChange={(event) =>
+                      setFinancialDocuments((prev) =>
+                        prev.map((doc) =>
+                          doc.id === activeDocument.id ? { ...doc, name: event.target.value } : doc
+                        )
+                      )
+                    }
+                    className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-lg font-semibold text-slate-900"
+                    placeholder="Document header"
+                  />
                   <button
                     type="button"
                     onClick={addDocumentRow}
@@ -386,11 +429,46 @@ function Partnership() {
                   <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="bg-slate-50 text-slate-600">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium">Member</th>
-                        <th className="px-3 py-2 text-left font-medium">Cell</th>
-                        <th className="px-3 py-2 text-left font-medium">Amount</th>
-                        <th className="px-3 py-2 text-left font-medium">Category</th>
-                        <th className="px-3 py-2 text-left font-medium">Note</th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          <input
+                            type="text"
+                            value={activeDocument.headers?.memberName || defaultDocumentHeaders.memberName}
+                            onChange={(event) => updateDocumentHeader("memberName", event.target.value)}
+                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+                          />
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          <input
+                            type="text"
+                            value={activeDocument.headers?.cellName || defaultDocumentHeaders.cellName}
+                            onChange={(event) => updateDocumentHeader("cellName", event.target.value)}
+                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+                          />
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          <input
+                            type="text"
+                            value={activeDocument.headers?.amount || defaultDocumentHeaders.amount}
+                            onChange={(event) => updateDocumentHeader("amount", event.target.value)}
+                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+                          />
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          <input
+                            type="text"
+                            value={activeDocument.headers?.category || defaultDocumentHeaders.category}
+                            onChange={(event) => updateDocumentHeader("category", event.target.value)}
+                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+                          />
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          <input
+                            type="text"
+                            value={activeDocument.headers?.note || defaultDocumentHeaders.note}
+                            onChange={(event) => updateDocumentHeader("note", event.target.value)}
+                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+                          />
+                        </th>
                         <th className="px-3 py-2 text-left font-medium">Action</th>
                       </tr>
                     </thead>
@@ -449,7 +527,7 @@ function Partnership() {
                               <button
                                 type="button"
                                 onClick={() => deleteDocumentRow(row.id)}
-                                className="rounded border border-rose-300 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50"
+                                className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                               >
                                 Delete
                               </button>
