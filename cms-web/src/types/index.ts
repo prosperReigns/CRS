@@ -89,12 +89,15 @@ export interface Report {
   id: number;
   cell: number;
   cell_name: string;
-   fellowship_name?: string;
+  fellowship_name?: string;
   submitted_by: number;
   author: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
   meeting_date: string;
+  meeting_time?: string | null;
+  meeting_duration_minutes?: number | null;
   report_type: "week1_prayer_planning" | "week2_bible_study" | "week3_bible_study" | "week4_outreach";
   attendees: ReportAttendee[];
+  first_timer_attendees?: ReportAttendee[];
   attendance_count: number;
   attendee_names?: string;
   new_members: number;

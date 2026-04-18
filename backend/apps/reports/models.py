@@ -25,6 +25,8 @@ class CellReport(models.Model):
     submitted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="submitted_reports")
     leader = models.ForeignKey(User, on_delete=models.CASCADE)
     meeting_date = models.DateField(db_index=True)
+    meeting_time = models.TimeField(null=True, blank=True)
+    meeting_duration_minutes = models.PositiveIntegerField(null=True, blank=True)
     report_type = models.CharField(
         max_length=32,
         choices=ReportType.choices,
@@ -32,6 +34,7 @@ class CellReport(models.Model):
     )
     service = models.ForeignKey(ChurchService, null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
     attendees = models.ManyToManyField(MemberProfile, related_name="cell_reports")
+    first_timer_attendees = models.ManyToManyField(MemberProfile, related_name="first_timer_reports", blank=True)
     attendance_count = models.PositiveIntegerField(default=0)
     attendee_names = models.TextField(blank=True)
     new_members = models.PositiveIntegerField(default=0)
