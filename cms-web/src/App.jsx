@@ -8,6 +8,7 @@ import SubmitReport from "./pages/reports/SubmitReport";
 import ManageReports from "./pages/reports/ManageReports";
 import MyReports from "./pages/reports/MyReports";
 import Members from "./pages/members/Members";
+import MemberProfile from "./pages/members/MemberProfile";
 import Attendance from "./pages/members/Attendance";
 import AssignCellLeader from "./pages/members/AssignCellLeader";
 import FirstTimers from "./pages/members/FirstTimers";
@@ -97,6 +98,15 @@ function App() {
           element={
             <ProtectedLayoutRoute allowedRoles={memberManagerRoles}>
               <Members />
+            </ProtectedLayoutRoute>
+          }
+        />
+
+        <Route
+          path="/members/:memberId"
+          element={
+            <ProtectedLayoutRoute allowedRoles={memberManagerRoles}>
+              <MemberProfile />
             </ProtectedLayoutRoute>
           }
         />

@@ -11,6 +11,27 @@ export const getMembers = async (): Promise<Member[]> => {
   }
 };
 
+export const getMemberProfile = async (memberId: number): Promise<Member> => {
+  try {
+    const response = await API.get<Member>(`members/profiles/${memberId}/`);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch member profile."));
+  }
+};
+
+export const updateMemberProfile = async (
+  memberId: number,
+  data: Partial<Pick<Member, "is_baptised" | "foundation_completed" | "souls_won">>
+): Promise<Member> => {
+  try {
+    const response = await API.patch<Member>(`members/profiles/${memberId}/`, data);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update member profile."));
+  }
+};
+
 export const markAttendance = async (data: AttendanceBulkRequest): Promise<AttendanceBulkResponse> => {
   try {
     const payload: {
