@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createReport } from "../../api/reports";
 import { getMembers } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
@@ -9,16 +9,22 @@ function SubmitReport() {
   const [form, setForm] = useState({
     cell: "",
     meeting_date: "",
+    meeting_time: "",
+    meeting_duration_minutes: "",
     report_type: "",
-    new_members: "",
     offering_amount: "",
     summary: "",
-    attendee_names: "",
   });
   const [members, setMembers] = useState([]);
   const [attendees, setAttendees] = useState([]);
+  const [firstTimerAttendees, setFirstTimerAttendees] = useState([]);
   const [attendeeSearch, setAttendeeSearch] = useState("");
+  const [customAttendeeInput, setCustomAttendeeInput] = useState("");
+  const [customAttendees, setCustomAttendees] = useState([]);
+  const [customFirstTimers, setCustomFirstTimers] = useState([]);
   const [images, setImages] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  const customAttendeeCounter = useRef(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -38,6 +44,10 @@ function SubmitReport() {
   const selectedMembers = useMemo(
     () => members.filter((member) => attendees.includes(member.id)),
     [members, attendees]
+  );
+  const selectedCustomAttendees = useMemo(
+    () => customAttendees.filter((entry) => attendees.includes(entry.id)),
+    [customAttendees, attendees]
   );
 
   const cellOptions = useMemo(() => {
@@ -66,7 +76,42 @@ function SubmitReport() {
   }, [members, attendeeSearch]);
 
   const toggleAttendee = (id) => {
-    setAttendees((prev) => (prev.includes(id) ? prev.filter((memberId) => memberId !== id) : [...prev, id]));
+    setAttendees((prev) => {
+      if (prev.includes(id)) {
+        setFirstTimerAttendees((timerPrev) => timerPrev.filter((memberId) => memberId !== id));
+        setCustomFirstTimers((timerPrev) => timerPrev.filter((memberId) => memberId !== id));
+        return prev.filter((memberId) => memberId !== id);
+      }
+      return [...prev, id];
+    });
+  };
+
+  useEffect(() => {
+    const urls = images.map((img) => URL.createObjectURL(img));
+    setImagePreviewUrls(urls);
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [images]);
+
+  const toggleFirstTimerAttendee = (id) => {
+    if (!attendees.includes(id)) return;
+    setFirstTimerAttendees((prev) => (prev.includes(id) ? prev.filter((memberId) => memberId !== id) : [...prev, id]));
+  };
+
+  const addCustomAttendee = () => {
+    const normalized = customAttendeeInput.trim();
+    if (!normalized) return;
+    customAttendeeCounter.current += 1;
+    const id = `custom-${customAttendeeCounter.current}`;
+    setCustomAttendees((prev) => [...prev, { id, name: normalized }]);
+    setAttendees((prev) => [...prev, id]);
+    setCustomAttendeeInput("");
+  };
+
+  const toggleCustomFirstTimer = (id) => {
+    if (!attendees.includes(id)) return;
+    setCustomFirstTimers((prev) => (prev.includes(id) ? prev.filter((memberId) => memberId !== id) : [...prev, id]));
   };
 
   const handleSubmit = async (e) => {
@@ -74,7 +119,10 @@ function SubmitReport() {
     setError("");
     setSuccess("");
 
-    if (attendees.length < 1) {
+    const selectedMemberIds = attendees.filter((id) => typeof id === "number");
+    const selectedCustomNames = customAttendees.filter((entry) => attendees.includes(entry.id)).map((entry) => entry.name);
+
+    if (selectedMemberIds.length + selectedCustomNames.length < 1) {
       setError("Select at least one attendee.");
       return;
     }
@@ -87,13 +135,21 @@ function SubmitReport() {
     const formData = new FormData();
     formData.append("cell", form.cell);
     formData.append("meeting_date", form.meeting_date);
+    formData.append("meeting_time", form.meeting_time);
+    if (form.meeting_duration_minutes) {
+      formData.append("meeting_duration_minutes", form.meeting_duration_minutes);
+    }
+    const computedNewMembers = firstTimerAttendees.length + customFirstTimers.length;
     formData.append("report_type", form.report_type);
-    formData.append("new_members", form.new_members || "0");
+    formData.append("new_members", String(computedNewMembers));
     formData.append("offering_amount", form.offering_amount);
     formData.append("summary", form.summary);
-    formData.append("attendee_names", form.attendee_names);
-    attendees.forEach((attendeeId) => {
+    formData.append("attendee_names", selectedCustomNames.join(", "));
+    selectedMemberIds.forEach((attendeeId) => {
       formData.append("attendees", String(attendeeId));
+    });
+    firstTimerAttendees.forEach((attendeeId) => {
+      formData.append("first_timer_attendees", String(attendeeId));
     });
     images.forEach((img) => {
       formData.append("images[]", img);
@@ -105,13 +161,16 @@ function SubmitReport() {
         setForm({
           cell: form.cell,
           meeting_date: "",
+          meeting_time: "",
+          meeting_duration_minutes: "",
           report_type: "",
-          new_members: "",
           offering_amount: "",
           summary: "",
-        attendee_names: "",
       });
       setAttendees([]);
+      setFirstTimerAttendees([]);
+      setCustomAttendees([]);
+      setCustomFirstTimers([]);
       setImages([]);
     } catch (err) {
       setError(err.message || "Error submitting report.");
@@ -133,13 +192,30 @@ function SubmitReport() {
         {success && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{success}</p>}
       </div>
 
-      {images.length > 0 && (
-        <ul aria-label="Uploaded images" className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-          {images.map((img, i) => (
-            <li key={i} className="truncate">{img.name}</li>
-          ))}
-        </ul>
-      )}
+      <div className="space-y-2">
+        {imagePreviewUrls[0] ? (
+          <img
+            src={imagePreviewUrls[0]}
+            alt="Meeting preview"
+            className="h-64 w-full rounded-2xl border border-slate-200 object-cover"
+          />
+        ) : (
+          <div className="flex h-52 w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+            Add a meeting image
+          </div>
+        )}
+        <label className="text-sm font-medium text-slate-700" htmlFor="meeting-images-upload">
+          Upload meeting images
+        </label>
+        <input
+          id="meeting-images-upload"
+          type="file"
+          multiple
+          className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2 text-sm"
+          onChange={(e) => setImages([...e.target.files])}
+          accept="image/*"
+        />
+      </div>
 
       <label className="block space-y-1">
         <span className="text-sm font-medium text-slate-700">Cell</span>
@@ -172,6 +248,29 @@ function SubmitReport() {
         }
         required
       />
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-slate-700">Meeting Time</span>
+          <input
+            type="time"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+            value={form.meeting_time}
+            onChange={(e) => setForm({ ...form, meeting_time: e.target.value })}
+            required
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-slate-700">Meeting Duration (minutes)</span>
+          <input
+            type="number"
+            min="1"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+            value={form.meeting_duration_minutes}
+            onChange={(e) => setForm({ ...form, meeting_duration_minutes: e.target.value })}
+            required
+          />
+        </label>
+      </div>
 
       <label className="block space-y-1">
         <span className="text-sm font-medium text-slate-700">Report Type</span>
@@ -196,42 +295,100 @@ function SubmitReport() {
         value={attendeeSearch}
         onChange={(e) => setAttendeeSearch(e.target.value)}
       />
+      <div className="flex gap-2">
+        <input
+          placeholder="Add attendee by name"
+          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          value={customAttendeeInput}
+          onChange={(e) => setCustomAttendeeInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addCustomAttendee();
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={addCustomAttendee}
+          className="rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          Add
+        </button>
+      </div>
 
       <p className="text-sm text-slate-600">
         Selected attendees: <strong>{attendees.length}</strong>
       </p>
       <div className="max-h-56 space-y-1 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
         {visibleMembers.map((member) => (
-          <label key={member.id} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-white">
-            <input
-              type="checkbox"
-              checked={attendees.includes(member.id)}
-              onChange={() => toggleAttendee(member.id)}
-              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-            />{" "}
-            {member.user?.username} {member.cell_name ? `(${member.cell_name})` : ""}
-          </label>
+          <div key={member.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-white">
+            <label className="flex min-w-0 items-center gap-2">
+              <input
+                type="checkbox"
+                checked={attendees.includes(member.id)}
+                onChange={() => toggleAttendee(member.id)}
+                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <span className="truncate">
+                {member.user?.username} {member.cell_name ? `(${member.cell_name})` : ""}
+              </span>
+            </label>
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={firstTimerAttendees.includes(member.id)}
+                disabled={!attendees.includes(member.id)}
+                onChange={() => toggleFirstTimerAttendee(member.id)}
+                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+              />
+              First timer
+            </label>
+          </div>
+        ))}
+        {customAttendees.map((entry) => (
+          <div key={entry.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-white">
+            <label className="flex min-w-0 items-center gap-2">
+              <input
+                type="checkbox"
+                checked={attendees.includes(entry.id)}
+                onChange={() => toggleAttendee(entry.id)}
+                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <span className="truncate">{entry.name}</span>
+            </label>
+            <label className="flex items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={customFirstTimers.includes(entry.id)}
+                disabled={!attendees.includes(entry.id)}
+                onChange={() => toggleCustomFirstTimer(entry.id)}
+                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+              />
+              First timer
+            </label>
+          </div>
         ))}
       </div>
 
-      {selectedMembers.length > 0 && (
+      {(selectedMembers.length > 0 || selectedCustomAttendees.length > 0) && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
           <p className="mb-2 text-sm font-medium text-slate-700">Selected members preview:</p>
           <ul className="grid gap-1 text-sm text-slate-600">
             {selectedMembers.map((member) => (
               <li key={member.id}>{member.user?.username}</li>
             ))}
+            {selectedCustomAttendees.map((entry) => (
+              <li key={entry.id}>{entry.name}</li>
+            ))}
           </ul>
         </div>
       )}
 
       <input
-        placeholder="New Members"
-        type="number"
-        min="0"
-        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-        value={form.new_members}
-        onChange={(e) => setForm({ ...form, new_members: e.target.value })}
+        value={`First timers: ${firstTimerAttendees.length + customFirstTimers.length}`}
+        className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 text-slate-700"
+        disabled
       />
 
       <input
@@ -246,25 +403,11 @@ function SubmitReport() {
       />
 
       <textarea
-        placeholder="Names of members that attended (comma-separated)"
-        className="min-h-20 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-        value={form.attendee_names}
-        onChange={(e) => setForm({ ...form, attendee_names: e.target.value })}
-      />
-
-      <textarea
         placeholder="Summary"
         className="min-h-28 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={form.summary}
         onChange={(e) => setForm({ ...form, summary: e.target.value })}
         required
-      />
-
-      <input
-        type="file"
-        multiple
-        className="w-full rounded-lg border border-slate-300 bg-slate-50 p-2 text-sm"
-        onChange={(e) => setImages([...e.target.files])}
       />
 
       <button
