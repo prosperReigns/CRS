@@ -6,7 +6,21 @@ import ErrorState from "../../components/ui/ErrorState";
 const partnershipLevels = ["bronze", "silver", "gold", "platinum"];
 const financialStorageKey = "crs.partnership.financial-documents.v1";
 
-const createRowId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+const createRowId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const escapeCsvValue = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+const sanitizeFilename = (value) => {
+  const sanitized = String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9-_]/g, "_");
+  return sanitized || "financial-document";
+};
 
 const normalizeDocuments = (value) => {
   if (!Array.isArray(value)) return [];
@@ -60,7 +74,7 @@ const readStoredDocuments = () => {
     const parsed = JSON.parse(raw);
     return normalizeDocuments(parsed);
   } catch (storageError) {
-    console.warn("Unable to load stored financial documents.", storageError);
+    console.warn("Unable to load stored financial documents due to a parsing/storage error.", storageError);
     return [];
   }
 };
@@ -97,7 +111,10 @@ function Partnership() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(financialStorageKey, JSON.stringify(financialDocuments));
+    const timeoutId = window.setTimeout(() => {
+      localStorage.setItem(financialStorageKey, JSON.stringify(financialDocuments));
+    }, 150);
+    return () => window.clearTimeout(timeoutId);
   }, [financialDocuments]);
 
   const activeDocument = useMemo(
@@ -151,7 +168,6 @@ function Partnership() {
     if (!activeDocument) return;
 
     const headers = ["Member", "Cell", "Amount", "Category", "Note"];
-    const escapeCsvValue = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
     const rows = activeDocument.rows.map((row) =>
       [row.memberName, row.cellName, row.amount, row.category, row.note].map(escapeCsvValue).join(",")
     );
@@ -161,8 +177,7 @@ function Partnership() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    const safeDocumentName = activeDocument.name.trim().replace(/[^a-zA-Z0-9-_]/g, "_");
-    link.download = `${safeDocumentName || "financial-document"}.csv`;
+    link.download = `${sanitizeFilename(activeDocument.name)}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
