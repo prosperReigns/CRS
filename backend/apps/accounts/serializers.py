@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
 
-from .models import User
+from .models import StaffResponsibility, User
 
 MISSING = object()
 
@@ -38,6 +38,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    responsibilities = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+    )
 
     class Meta:
         model = User
@@ -50,16 +56,53 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "phone",
             "role",
             "password",
+            "responsibilities",
             "is_active",
         ]
         read_only_fields = ["id"]
 
+    def validate(self, attrs):
+        responsibility_codes = attrs.get("responsibilities") or []
+        role = attrs.get("role")
+        normalized_codes = list(dict.fromkeys(code.strip() for code in responsibility_codes if code.strip()))
+
+        if role != User.Role.STAFF and normalized_codes:
+            raise serializers.ValidationError(
+                {"responsibilities": "Only users with the staff role can be assigned responsibilities."}
+            )
+
+        responsibility_map = {}
+        if normalized_codes:
+            responsibility_map = {
+                item.code: item for item in StaffResponsibility.objects.filter(code__in=normalized_codes)
+            }
+            missing_codes = sorted(set(normalized_codes) - set(responsibility_map.keys()))
+            if missing_codes:
+                raise serializers.ValidationError(
+                    {"responsibilities": f"Unknown responsibility codes: {', '.join(missing_codes)}."}
+                )
+
+        attrs["responsibilities"] = normalized_codes
+        attrs["_responsibility_objects"] = [responsibility_map[code] for code in normalized_codes]
+        return attrs
+
     def create(self, validated_data):
+        responsibilities = validated_data.pop("_responsibility_objects", [])
+        validated_data.pop("responsibilities", None)
         password = validated_data.pop("password")
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        if user.role == User.Role.STAFF and responsibilities:
+            user.staff_responsibilities.set(responsibilities)
         return user
+
+
+class StaffResponsibilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StaffResponsibility
+        fields = ["id", "name", "code", "description"]
+        read_only_fields = ["id"]
 
 
 class LoginTokenSerializer(TokenObtainPairSerializer):

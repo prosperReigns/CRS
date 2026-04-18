@@ -104,7 +104,7 @@ function App() {
         <Route
           path="/members/assign-cell-leader"
           element={
-            <ProtectedLayoutRoute allowedRoles={cellLeaderAssignmentRoles}>
+            <ProtectedLayoutRoute allowedRoles={cellLeaderAssignmentRoles} allowedResponsibilities={["cell_ministry"]}>
               <AssignCellLeader />
             </ProtectedLayoutRoute>
           }
@@ -113,7 +113,10 @@ function App() {
         <Route
           path="/members/assign-fellowship-leader"
           element={
-            <ProtectedLayoutRoute allowedRoles={fellowshipLeaderAssignmentRoles}>
+            <ProtectedLayoutRoute
+              allowedRoles={fellowshipLeaderAssignmentRoles}
+              allowedResponsibilities={["cell_ministry"]}
+            >
               <AssignFellowshipLeader />
             </ProtectedLayoutRoute>
           }

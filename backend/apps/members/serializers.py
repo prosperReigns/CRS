@@ -32,6 +32,8 @@ class MemberProfileSerializer(serializers.ModelSerializer):
             "first_visit_date",
             "follow_up_status",
             "visitation_notes",
+            "visitation_fellowship_leader",
+            "visitation_cell_leader",
             "is_partner",
             "partnership_date",
             "partnership_level",
@@ -42,6 +44,16 @@ class MemberProfileSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "souls_won", "created_at", "updated_at", "cell_name", "user"]
+
+    def validate_visitation_fellowship_leader(self, value):
+        if value and value.role != User.Role.FELLOWSHIP_LEADER:
+            raise serializers.ValidationError("Visitation fellowship leader must have the fellowship_leader role.")
+        return value
+
+    def validate_visitation_cell_leader(self, value):
+        if value and value.role != User.Role.CELL_LEADER:
+            raise serializers.ValidationError("Visitation cell leader must have the cell_leader role.")
+        return value
 
 
 class SoulWinningSerializer(serializers.ModelSerializer):
@@ -72,8 +84,27 @@ class SoulWinningSerializer(serializers.ModelSerializer):
 class FirstTimerFollowUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = MemberProfile
-        fields = ["id", "is_first_timer", "first_visit_date", "follow_up_status", "visitation_notes", "updated_at"]
+        fields = [
+            "id",
+            "is_first_timer",
+            "first_visit_date",
+            "follow_up_status",
+            "visitation_notes",
+            "visitation_fellowship_leader",
+            "visitation_cell_leader",
+            "updated_at",
+        ]
         read_only_fields = ["id", "updated_at"]
+
+    def validate_visitation_fellowship_leader(self, value):
+        if value and value.role != User.Role.FELLOWSHIP_LEADER:
+            raise serializers.ValidationError("Visitation fellowship leader must have the fellowship_leader role.")
+        return value
+
+    def validate_visitation_cell_leader(self, value):
+        if value and value.role != User.Role.CELL_LEADER:
+            raise serializers.ValidationError("Visitation cell leader must have the cell_leader role.")
+        return value
 
 
 class PartnershipUpdateSerializer(serializers.ModelSerializer):

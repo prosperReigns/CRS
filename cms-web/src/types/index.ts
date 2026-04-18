@@ -25,6 +25,8 @@ export interface Member {
   first_visit_date: string | null;
   follow_up_status: string;
   visitation_notes: string;
+  visitation_fellowship_leader: number | null;
+  visitation_cell_leader: number | null;
   is_partner: boolean;
   partnership_date: string | null;
   partnership_level: string;

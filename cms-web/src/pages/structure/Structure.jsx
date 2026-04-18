@@ -5,6 +5,7 @@ import { getUsers } from "../../api/users";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
+import { canAccessCellMinistry } from "../../utils/access";
 
 const meetingDays = [
   { value: "monday", label: "Monday" },
@@ -18,8 +19,8 @@ const meetingDays = [
 
 function Structure() {
   const { user } = useContext(AuthContext);
-  const canCreateFellowship = ["pastor", "staff"].includes(user?.role);
-  const canCreateCell = ["pastor", "staff", "fellowship_leader"].includes(user?.role);
+  const canCreateFellowship = user?.role === "pastor" || canAccessCellMinistry(user);
+  const canCreateCell = user?.role === "pastor" || user?.role === "fellowship_leader" || canAccessCellMinistry(user);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");

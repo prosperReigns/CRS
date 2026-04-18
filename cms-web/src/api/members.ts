@@ -53,7 +53,12 @@ export const getFirstTimers = async (): Promise<Member[]> => {
 
 export const updateFirstTimerFollowUp = async (
   memberId: number,
-  data: Partial<Pick<Member, "first_visit_date" | "follow_up_status" | "visitation_notes">>
+  data: Partial<
+    Pick<
+      Member,
+      "first_visit_date" | "follow_up_status" | "visitation_notes" | "visitation_fellowship_leader" | "visitation_cell_leader"
+    >
+  >
 ): Promise<Member> => {
   try {
     const response = await API.patch<Member>(`members/profiles/${memberId}/first-timer-follow-up/`, data);

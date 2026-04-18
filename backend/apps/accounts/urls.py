@@ -7,11 +7,13 @@ from .views import (
     AssignFellowshipLeaderView,
     CreateLeaderView,
     LoginView,
+    StaffResponsibilityViewSet,
     UserViewSet,
 )
 
 router = DefaultRouter()
 router.register("users", UserViewSet, basename="user")
+router.register("staff-responsibilities", StaffResponsibilityViewSet, basename="staff-responsibility")
 
 urlpatterns = router.urls + [
     path("auth/login/", LoginView.as_view(), name="login"),
