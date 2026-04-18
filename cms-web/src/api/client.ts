@@ -38,6 +38,30 @@ export const registerUnauthorizedHandler = (handler: UnauthorizedHandler) => {
 };
 
 export const getErrorMessage = (error: unknown, fallback: string): string => {
+  // Keep recursion bounded while still covering common DRF/axios nested error shapes.
+  const MAX_ERROR_EXTRACTION_DEPTH = 8;
+  const seenObjects = new WeakSet<object>();
+  const extractMessage = (value: unknown, depth = 0): string | undefined => {
+    if (depth > MAX_ERROR_EXTRACTION_DEPTH) return undefined;
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const message = extractMessage(item, depth + 1);
+        if (message) return message;
+      }
+      return undefined;
+    }
+    if (value && typeof value === "object") {
+      if (seenObjects.has(value)) return undefined;
+      seenObjects.add(value);
+      for (const nestedValue of Object.values(value)) {
+        const message = extractMessage(nestedValue, depth + 1);
+        if (message) return message;
+      }
+    }
+    return undefined;
+  };
+
   const apiError = error as AxiosError<ApiErrorShape>;
   const responseData = apiError.response?.data;
   if (!responseData) return fallback;
@@ -49,8 +73,7 @@ export const getErrorMessage = (error: unknown, fallback: string): string => {
     return responseData.non_field_errors[0];
   }
 
-  const fieldError = Object.values(responseData).find((value) => typeof value === "string");
-  return (fieldError as string) || fallback;
+  return extractMessage(responseData) || fallback;
 };
 
 API.interceptors.request.use((config) => {
