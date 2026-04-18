@@ -13,6 +13,7 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
   const [notificationError, setNotificationError] = useState("");
   const notificationMenuRef = useRef(null);
   const notificationButtonRef = useRef(null);
+  const notificationDialogRef = useRef(null);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.is_read).length,
@@ -71,6 +72,14 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
     };
   }, [menuOpen, selectedNotification]);
 
+  useEffect(() => {
+    if (!selectedNotification || !notificationDialogRef.current) return;
+    const firstFocusable = notificationDialogRef.current.querySelector(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    firstFocusable?.focus();
+  }, [selectedNotification]);
+
   const handleMarkRead = async (notificationId) => {
     try {
       await markNotificationRead(notificationId);
@@ -97,6 +106,29 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
     setSelectedNotification(notification);
     if (!notification.is_read) {
       handleMarkRead(notification.id);
+    }
+  };
+
+  const handleDialogKeyDown = (event) => {
+    if (event.key !== "Tab" || !notificationDialogRef.current) return;
+    const focusableElements = notificationDialogRef.current.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusableElements.length) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    const activeElement = document.activeElement;
+
+    if (event.shiftKey && activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+      return;
+    }
+
+    if (!event.shiftKey && activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
     }
   };
 
@@ -201,16 +233,33 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
         </div>
 
         {selectedNotification && (
-          <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4">
-            <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+          <div
+            className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4"
+            onClick={() => setSelectedNotification(null)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={`notification-title-${selectedNotification.id}`}
+              className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-5 shadow-xl"
+              ref={notificationDialogRef}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={handleDialogKeyDown}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">{selectedNotification.title}</h3>
+                  <h3
+                    id={`notification-title-${selectedNotification.id}`}
+                    className="text-lg font-semibold text-slate-900"
+                  >
+                    {selectedNotification.title}
+                  </h3>
                   <p className="text-xs text-slate-500">{selectedNotification.category}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSelectedNotification(null)}
+                  aria-label="Close notification"
                   className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
                 >
                   Close
