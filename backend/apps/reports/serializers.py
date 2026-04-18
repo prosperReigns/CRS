@@ -196,6 +196,8 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"cell": "Cell leaders can only submit for their own cell."})
         if cell is None:
             raise serializers.ValidationError({"cell": "Cell is required."})
+        if cell.leader_id is None:
+            raise serializers.ValidationError({"cell": "Selected cell must have an assigned leader."})
 
         if attendees is None:
             if self.instance is None:

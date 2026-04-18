@@ -30,13 +30,15 @@ function Sidebar({ isOpen, onToggle }) {
       <button
         type="button"
         onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls="app-sidebar-navigation"
         className="m-4 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
       >
         {isOpen ? "Hide Sidebar" : "Show Sidebar"}
       </button>
 
       {isOpen && (
-        <aside className="w-64 p-4 pt-0">
+        <aside id="app-sidebar-navigation" className="w-64 p-4 pt-0">
       <h3 className="mb-5 text-lg font-bold tracking-wide">ChurchSys</h3>
 
       {canViewDashboard && !isFrozen && (
