@@ -72,6 +72,7 @@ class CellReport(models.Model):
 
     @classmethod
     def infer_report_type(cls, meeting_date):
+        # Ministry calendar uses a fixed 4-week cycle per month; dates beyond day 21 map to week 4.
         week_of_month = ((meeting_date.day - 1) // 7) + 1
         if week_of_month <= 1:
             return cls.ReportType.WEEK1_PRAYER_AND_PLANNING
