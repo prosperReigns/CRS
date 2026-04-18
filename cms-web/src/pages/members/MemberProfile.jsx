@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { getMemberProfile, updateMemberProfile } from "../../api/members";
@@ -21,12 +21,8 @@ function MemberProfile() {
 
   const canEditTracking = ["cell_leader", "fellowship_leader", "staff", "pastor", "admin"].includes(user?.role || "");
 
-  useEffect(() => {
+  const fetchMember = useCallback(async () => {
     if (!memberId) return;
-    fetchMember();
-  }, [memberId]);
-
-  const fetchMember = async () => {
     setLoading(true);
     setError("");
     setSuccess("");
@@ -43,7 +39,11 @@ function MemberProfile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [memberId]);
+
+  useEffect(() => {
+    fetchMember();
+  }, [fetchMember]);
 
   const handleTrackingSubmit = async (event) => {
     event.preventDefault();
