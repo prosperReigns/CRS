@@ -8,15 +8,15 @@ function Sidebar() {
 
   if (!user) return null;
 
-  const canManageReports = ["pastor", "fellowship_leader"].includes(user.role) || canAccessCellMinistry(user);
+  const canManageReports = ["admin", "pastor", "fellowship_leader"].includes(user.role) || canAccessCellMinistry(user);
   const canViewDashboard =
-    user.role === "pastor" || (user.role === "staff" ? hasAnyStaffResponsibility(user) : false);
-  const canViewSettings = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
-  const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
-  const canManageStructure = ["pastor", "fellowship_leader"].includes(user.role) || canAccessCellMinistry(user);
-  const canAssignCellLeaders = user.role === "pastor" || user.role === "fellowship_leader" || canAccessCellMinistry(user);
-  const canAssignFellowshipLeaders = user.role === "pastor" || canAccessCellMinistry(user);
-  const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
+    ["admin", "pastor"].includes(user.role) || (user.role === "staff" ? hasAnyStaffResponsibility(user) : false);
+  const canViewSettings = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
+  const canManageMembers = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
+  const canManageStructure = ["admin", "pastor", "fellowship_leader"].includes(user.role) || canAccessCellMinistry(user);
+  const canAssignCellLeaders = ["admin", "pastor"].includes(user.role) || user.role === "fellowship_leader" || canAccessCellMinistry(user);
+  const canAssignFellowshipLeaders = ["admin", "pastor"].includes(user.role) || canAccessCellMinistry(user);
+  const canMessage = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
     user.role
   );
   const isFrozen = Boolean(user.is_frozen);

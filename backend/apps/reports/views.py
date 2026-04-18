@@ -34,7 +34,7 @@ def scoped_reports(user):
         .all()
     )
 
-    if user.role == User.Role.PASTOR:
+    if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
         return qs
     if user.role == User.Role.STAFF:
         return qs if has_staff_permission(user, "view_reports") else qs.none()
@@ -72,12 +72,12 @@ class CellReportViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def review(self, request, pk=None):
         report = self.get_object()
-        is_pastor = request.user.role == User.Role.PASTOR
+        is_pastor = request.user.role in {User.Role.PASTOR, User.Role.ADMIN}
         is_staff_reviewer = request.user.role == User.Role.STAFF and has_staff_permission(request.user, "review_reports")
         is_fellowship_reviewer = request.user.role == User.Role.FELLOWSHIP_LEADER
 
         if not (is_pastor or is_staff_reviewer or is_fellowship_reviewer):
-            raise PermissionDenied("Only pastors, fellowship leaders, or authorized staff can review reports.")
+            raise PermissionDenied("Only pastors, admins, fellowship leaders, or authorized staff can review reports.")
         if is_fellowship_reviewer and report.cell.fellowship.leader_id != request.user.id:
             raise PermissionDenied("You can only review reports in your fellowship.")
         if report.status != CellReport.Status.PENDING:
@@ -98,7 +98,8 @@ class CellReportViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def approve(self, request, pk=None):
         report = self.get_object()
-        self._ensure_role(request.user, User.Role.PASTOR, "Only pastors can approve reports.")
+        if request.user.role not in {User.Role.PASTOR, User.Role.ADMIN}:
+            raise PermissionDenied("Only pastors or admins can approve reports.")
         if report.status != CellReport.Status.REVIEWED:
             return Response({"detail": "Report must be reviewed before approval."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -117,7 +118,8 @@ class CellReportViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def reject(self, request, pk=None):
         report = self.get_object()
-        self._ensure_role(request.user, User.Role.PASTOR, "Only pastors can reject reports.")
+        if request.user.role not in {User.Role.PASTOR, User.Role.ADMIN}:
+            raise PermissionDenied("Only pastors or admins can reject reports.")
         if report.status != CellReport.Status.REVIEWED:
             return Response({"detail": "Report must be reviewed before rejection."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -135,8 +137,8 @@ class CellReportViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def comment(self, request, pk=None):
         report = self.get_object()
-        if request.user.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR}:
-            raise PermissionDenied("Only fellowship leaders and pastors can comment.")
+        if request.user.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR, User.Role.ADMIN}:
+            raise PermissionDenied("Only fellowship leaders, pastors, and admins can comment.")
         if (
             request.user.role == User.Role.FELLOWSHIP_LEADER
             and report.cell.fellowship.leader_id != request.user.id

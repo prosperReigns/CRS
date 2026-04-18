@@ -12,7 +12,7 @@ class FellowshipPermission(BasePermission):
             if request.user.role == User.Role.STAFF:
                 return has_staff_permission(request.user, "manage_cells")
             return True
-        if request.user.role == User.Role.PASTOR:
+        if request.user.role in {User.Role.PASTOR, User.Role.ADMIN}:
             return True
         if request.user.role == User.Role.STAFF:
             return has_staff_permission(request.user, "manage_cells")
@@ -27,7 +27,7 @@ class CellPermission(BasePermission):
             if request.user.role == User.Role.STAFF:
                 return has_staff_permission(request.user, "manage_cells")
             return True
-        if request.user.role in {User.Role.PASTOR, User.Role.FELLOWSHIP_LEADER}:
+        if request.user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.FELLOWSHIP_LEADER}:
             return True
         if request.user.role == User.Role.STAFF:
             return has_staff_permission(request.user, "manage_cells")
@@ -44,6 +44,7 @@ class BibleStudyClassPermission(BasePermission):
             return True
         if request.user.role in {
             User.Role.PASTOR,
+            User.Role.ADMIN,
             User.Role.FELLOWSHIP_LEADER,
             User.Role.CELL_LEADER,
         }:

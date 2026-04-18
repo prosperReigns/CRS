@@ -17,12 +17,12 @@ import Structure from "./pages/structure/Structure";
 import AssignFellowshipLeader from "./pages/structure/AssignFellowshipLeader";
 import Settings from "./pages/settings/Settings";
 
-const memberManagerRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
-const messagingRoles = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
-const structureRoles = ["pastor", "staff", "fellowship_leader"];
-const fellowshipLeaderAssignmentRoles = ["pastor", "staff"];
-const cellLeaderAssignmentRoles = ["pastor", "staff", "fellowship_leader"];
-const settingsRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
+const memberManagerRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"];
+const messagingRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
+const structureRoles = ["admin", "pastor", "staff", "fellowship_leader"];
+const fellowshipLeaderAssignmentRoles = ["admin", "pastor", "staff"];
+const cellLeaderAssignmentRoles = ["admin", "pastor", "staff", "fellowship_leader"];
+const settingsRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"];
 
 function ProtectedLayoutRoute({ allowedRoles, allowedResponsibilities, children }) {
   return (
@@ -43,7 +43,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedLayoutRoute
-              allowedRoles={["pastor", "staff"]}
+              allowedRoles={["admin", "pastor", "staff"]}
               allowedResponsibilities={["first_timer", "cell_ministry", "partnership"]}
             >
               <Dashboard />
@@ -75,7 +75,7 @@ function App() {
           path="/reports/manage"
           element={
             <ProtectedLayoutRoute
-              allowedRoles={["pastor", "staff", "fellowship_leader"]}
+              allowedRoles={["admin", "pastor", "staff", "fellowship_leader"]}
               allowedResponsibilities={["cell_ministry"]}
             >
               <ManageReports />
@@ -143,7 +143,7 @@ function App() {
         <Route
           path="/first-timers"
           element={
-            <ProtectedLayoutRoute allowedRoles={["pastor", "staff"]} allowedResponsibilities={["first_timer"]}>
+            <ProtectedLayoutRoute allowedRoles={["admin", "pastor", "staff"]} allowedResponsibilities={["first_timer"]}>
               <FirstTimers />
             </ProtectedLayoutRoute>
           }
@@ -152,7 +152,7 @@ function App() {
         <Route
           path="/partnership"
           element={
-            <ProtectedLayoutRoute allowedRoles={["pastor", "staff"]} allowedResponsibilities={["partnership"]}>
+            <ProtectedLayoutRoute allowedRoles={["admin", "pastor", "staff"]} allowedResponsibilities={["partnership"]}>
               <Partnership />
             </ProtectedLayoutRoute>
           }

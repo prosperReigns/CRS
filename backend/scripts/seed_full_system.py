@@ -44,6 +44,7 @@ def run():
     # -----------------------------
     # USERS (ROLES)
     # -----------------------------
+    admin = upsert_user(username="admin", role="admin")
     pastor = upsert_user(username="pastor", role="pastor")
     upsert_user(username="staff", role="staff")
     fellowship_leader = upsert_user(username="fellowship_leader", role="fellowship_leader")
@@ -188,6 +189,7 @@ def run():
 
     print("\nSEEDING COMPLETE\n")
     print("Login Credentials:")
+    print("Admin -> admin / password")
     print("Pastor -> pastor / password")
     print("Cell Leader -> cell_leader / password")
     print("Fellowship Leader -> fellowship_leader / password")

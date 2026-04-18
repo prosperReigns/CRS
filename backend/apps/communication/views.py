@@ -159,7 +159,7 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Announcement.objects.select_related("author").prefetch_related("recipients")
 
-        if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
             return qs
         return qs.filter(Q(recipients=user) | Q(recipients__isnull=True)).distinct()
 

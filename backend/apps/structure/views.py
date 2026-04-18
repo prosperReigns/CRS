@@ -16,7 +16,7 @@ class FellowshipViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Fellowship.objects.select_related("leader").all()
 
-        if user.role == User.Role.PASTOR:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
             return qs
         if user.role == User.Role.STAFF:
             return qs if has_staff_permission(user, "manage_cells") else qs.none()
@@ -35,7 +35,7 @@ class CellViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Cell.objects.select_related("fellowship", "leader").all()
 
-        if user.role == User.Role.PASTOR:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
             return qs
         if user.role == User.Role.STAFF:
             return qs if has_staff_permission(user, "manage_cells") else qs.none()
@@ -61,7 +61,7 @@ class BibleStudyClassViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = BibleStudyClass.objects.select_related("cell", "cell__fellowship", "teacher").all()
 
-        if user.role == User.Role.PASTOR:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
             return qs
         if user.role == User.Role.STAFF:
             return qs if has_staff_permission(user, "manage_cells") else qs.none()

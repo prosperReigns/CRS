@@ -5,6 +5,7 @@ import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
 
 const roleLabelMap = {
+  admin: "Admin",
   pastor: "Pastor",
   staff: "Staff",
   fellowship_leader: "Fellowship Leader",
@@ -14,6 +15,7 @@ const roleLabelMap = {
 };
 
 const roleBadgeClassMap = {
+  admin: "bg-purple-100 text-purple-700",
   pastor: "bg-violet-100 text-violet-700",
   staff: "bg-blue-100 text-blue-700",
   fellowship_leader: "bg-emerald-100 text-emerald-700",
