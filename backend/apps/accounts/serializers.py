@@ -64,7 +64,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         responsibility_codes = attrs.get("responsibilities") or []
         role = attrs.get("role")
-        normalized_codes = list(dict.fromkeys(code.strip() for code in responsibility_codes if code and code.strip()))
+        normalized_codes = list(dict.fromkeys(code.strip() for code in responsibility_codes if code.strip()))
 
         if role != User.Role.STAFF and normalized_codes:
             raise serializers.ValidationError(
@@ -83,7 +83,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 )
 
         attrs["responsibilities"] = normalized_codes
-        attrs["_responsibility_objects"] = [responsibility_map[code] for code in normalized_codes if code in responsibility_map]
+        attrs["_responsibility_objects"] = [responsibility_map[code] for code in normalized_codes]
         return attrs
 
     def create(self, validated_data):
