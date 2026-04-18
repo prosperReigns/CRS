@@ -108,11 +108,15 @@ function Header() {
             aria-label="Notifications menu"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            className="relative rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            className={`relative rounded-lg border px-3 py-2 text-sm font-medium transition ${
+              unreadCount > 0
+                ? "border-red-600 bg-red-600 text-white hover:bg-red-700"
+                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+            }`}
           >
             Notifications
             {unreadCount > 0 && (
-              <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-xs text-white">
+              <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-xs font-semibold text-red-600">
                 {unreadCount}
               </span>
             )}
