@@ -128,8 +128,8 @@ function Partnership() {
 
   const handleCreateDocument = () => {
     const nextName = newDocumentName.trim() || `Financial Document ${financialDocuments.length + 1}`;
-    const seededRows = editablePartners.length > 0 ? editablePartners : partners;
-    const nextDocument = createDocument(nextName, seededRows);
+    const sourcePartners = editablePartners.length > 0 ? editablePartners : partners;
+    const nextDocument = createDocument(nextName, sourcePartners);
     setFinancialDocuments((prev) => [...prev, nextDocument]);
     setActiveDocumentId(nextDocument.id);
     setNewDocumentName("");
@@ -150,9 +150,9 @@ function Partnership() {
     if (!activeDocument) return;
 
     const headers = ["Member", "Cell", "Amount", "Category", "Note"];
-    const escape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const escapeCsvValue = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
     const rows = activeDocument.rows.map((row) =>
-      [row.memberName, row.cellName, row.amount, row.category, row.note].map(escape).join(",")
+      [row.memberName, row.cellName, row.amount, row.category, row.note].map(escapeCsvValue).join(",")
     );
     const csv = [headers.join(","), ...rows].join("\n");
 
@@ -160,7 +160,8 @@ function Partnership() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${activeDocument.name.replace(/[^a-zA-Z0-9-_]/g, "_") || "financial-document"}.csv`;
+    const safeDocumentName = activeDocument.name.trim().replace(/[^a-zA-Z0-9-_]/g, "_");
+    link.download = `${safeDocumentName || "financial-document"}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -405,9 +406,8 @@ function Partnership() {
                             </td>
                             <td className="px-3 py-2">
                               <input
-                                type="number"
-                                min="0"
-                                step="0.01"
+                                type="text"
+                                inputMode="decimal"
                                 value={row.amount}
                                 onChange={(event) => updateDocumentCell(row.id, "amount", event.target.value)}
                                 className="w-full rounded border border-slate-300 px-2 py-1"
