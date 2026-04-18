@@ -88,8 +88,10 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
           notification.id === notificationId ? { ...notification, is_read: true } : notification
         )
       );
+      return true;
     } catch (error) {
       setNotificationError(error.message || "Failed to mark notification as read.");
+      return false;
     }
   };
 
@@ -104,8 +106,8 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
 
   const handleOpenNotification = async (notification) => {
     if (!notification.is_read) {
-      await handleMarkRead(notification.id);
-      setSelectedNotification({ ...notification, is_read: true });
+      const markedRead = await handleMarkRead(notification.id);
+      setSelectedNotification(markedRead ? { ...notification, is_read: true } : notification);
       return;
     }
     setSelectedNotification(notification);
@@ -207,7 +209,7 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
                       handleOpenNotification(notification);
                     }
                   }}
-                  className={`cursor-pointer rounded-md border p-2 text-sm transition hover:border-brand-300 hover:bg-brand-50 ${
+                  className={`cursor-pointer rounded-md border p-2 text-sm transition-colors hover:border-brand-300 hover:bg-brand-50 ${
                     notification.is_read
                       ? "border-slate-200 bg-slate-50 text-slate-600"
                       : "border-brand-200 bg-brand-50 text-slate-800"
