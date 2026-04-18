@@ -8,13 +8,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
+from apps.accounts.responsibilities import has_staff_permission
 from .models import Attendance, ChurchService, MemberProfile, SoulWinning
 from .permissions import AttendancePermission, MemberProfilePermission, SoulWinningPermission
 from .serializers import (
     AttendanceSerializer,
     BulkAttendanceSerializer,
     ChurchServiceSerializer,
+    FirstTimerFollowUpSerializer,
     MemberProfileSerializer,
+    PartnershipUpdateSerializer,
     SoulWinningSerializer,
 )
 
@@ -66,6 +69,62 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can only assign members to your own cell.")
 
         serializer.save()
+
+    def _require_staff_permission(self, user, permission, message):
+        if user.role == User.Role.PASTOR:
+            return
+        if user.role != User.Role.STAFF or not has_staff_permission(user, permission):
+            raise PermissionDenied(message)
+
+    @action(detail=False, methods=["get"], url_path="first-timers")
+    def first_timers(self, request):
+        self._require_staff_permission(
+            request.user,
+            "view_new_members",
+            "Only pastor or first timer coordinators can view first timers.",
+        )
+        qs = scoped_member_profiles(request.user).filter(is_first_timer=True)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["patch"], url_path="first-timer-follow-up")
+    def first_timer_follow_up(self, request, pk=None):
+        self._require_staff_permission(
+            request.user,
+            "update_visitation",
+            "Only pastor or first timer coordinators can update follow-up records.",
+        )
+        member_profile = self.get_object()
+        if not member_profile.is_first_timer:
+            raise ValidationError({"is_first_timer": "Selected member is not marked as a first timer."})
+        serializer = FirstTimerFollowUpSerializer(member_profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="partners")
+    def partners(self, request):
+        self._require_staff_permission(
+            request.user,
+            "view_partnership",
+            "Only pastor or partnership representatives can view partnership records.",
+        )
+        qs = scoped_member_profiles(request.user).filter(is_partner=True)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["patch"], url_path="partnership")
+    def update_partnership(self, request, pk=None):
+        self._require_staff_permission(
+            request.user,
+            "update_partnership",
+            "Only pastor or partnership representatives can update partnership records.",
+        )
+        member_profile = self.get_object()
+        serializer = PartnershipUpdateSerializer(member_profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class SoulWinningViewSet(viewsets.ModelViewSet):

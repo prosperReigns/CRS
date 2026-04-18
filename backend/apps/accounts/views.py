@@ -29,7 +29,7 @@ class LoginView(TokenObtainPairView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all().order_by("username")
+    queryset = User.objects.prefetch_related("staff_responsibilities").all().order_by("username")
     settings_roles = {
         User.Role.PASTOR,
         User.Role.STAFF,
@@ -51,17 +51,18 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role in {User.Role.PASTOR, User.Role.STAFF}:
-            return User.objects.all().order_by("username")
+            return User.objects.prefetch_related("staff_responsibilities").all().order_by("username")
         if user.role == User.Role.FELLOWSHIP_LEADER:
             return (
                 User.objects.filter(
                     Q(member_profile__cell__fellowship__leader=user)
                     | Q(led_cells__fellowship__leader=user)
                 )
+                .prefetch_related("staff_responsibilities")
                 .distinct()
                 .order_by("username")
             )
-        return User.objects.filter(pk=user.pk)
+        return User.objects.filter(pk=user.pk).prefetch_related("staff_responsibilities")
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -125,7 +126,8 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def me(self, request):
-        serializer = UserSerializer(request.user)
+        user = User.objects.prefetch_related("staff_responsibilities").filter(pk=request.user.pk).first() or request.user
+        serializer = UserSerializer(user)
         return Response(serializer.data)
 
     @action(detail=False, methods=["get", "patch"], url_path="settings")
@@ -134,7 +136,8 @@ class UserViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You are not allowed to access account settings.")
 
         if request.method.lower() == "get":
-            serializer = UserSettingsSerializer(request.user, context={"request": request})
+            user = User.objects.prefetch_related("staff_responsibilities").filter(pk=request.user.pk).first() or request.user
+            serializer = UserSettingsSerializer(user, context={"request": request})
             return Response(serializer.data)
 
         serializer = UserSettingsSerializer(

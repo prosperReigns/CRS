@@ -8,6 +8,8 @@ MISSING = object()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    responsibilities = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -20,11 +22,18 @@ class UserSerializer(serializers.ModelSerializer):
             "bio",
             "profile_picture",
             "role",
+            "responsibilities",
             "is_frozen",
             "is_active",
             "date_joined",
         ]
         read_only_fields = ["id", "date_joined"]
+
+    def get_responsibilities(self, obj):
+        prefetched = getattr(obj, "_prefetched_objects_cache", {}).get("staff_responsibilities")
+        if prefetched is not None:
+            return [responsibility.code for responsibility in prefetched]
+        return list(obj.staff_responsibilities.values_list("code", flat=True))
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -68,6 +77,7 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
 
 class UserSettingsSerializer(serializers.ModelSerializer):
     cell_meeting_venue = serializers.CharField(required=False, allow_blank=True)
+    responsibilities = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -81,9 +91,10 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             "bio",
             "profile_picture",
             "role",
+            "responsibilities",
             "cell_meeting_venue",
         ]
-        read_only_fields = ["id", "username", "role"]
+        read_only_fields = ["id", "username", "role", "responsibilities"]
 
     def _get_linked_cell(self, user):
         led_cell = user.led_cells.order_by("id").first()
@@ -101,6 +112,12 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         cell = self._get_linked_cell(instance)
         data["cell_meeting_venue"] = cell.venue if cell else ""
         return data
+
+    def get_responsibilities(self, obj):
+        prefetched = getattr(obj, "_prefetched_objects_cache", {}).get("staff_responsibilities")
+        if prefetched is not None:
+            return [responsibility.code for responsibility in prefetched]
+        return list(obj.staff_responsibilities.values_list("code", flat=True))
 
     def validate(self, attrs):
         if "cell_meeting_venue" in attrs:

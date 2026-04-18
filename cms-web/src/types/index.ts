@@ -8,6 +8,7 @@ export interface User {
   bio?: string | null;
   profile_picture?: string | null;
   role: "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";
+  responsibilities?: string[];
   is_frozen?: boolean;
   is_active?: boolean;
   date_joined?: string;
@@ -20,7 +21,13 @@ export interface Member {
   cell_name: string | null;
   is_baptised: boolean;
   foundation_completed: boolean;
+  is_first_timer: boolean;
+  first_visit_date: string | null;
+  follow_up_status: string;
+  visitation_notes: string;
   is_partner: boolean;
+  partnership_date: string | null;
+  partnership_level: string;
   souls_won: number;
   join_date: string;
   last_attended: string | null;

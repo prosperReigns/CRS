@@ -6,6 +6,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from apps.accounts.models import User
+from apps.accounts.responsibilities import has_staff_permission
 from apps.communication.models import Notification
 from .services.report_enforcement import enforce_report_submission
 from .models import CellReport, ReportActivityLog, ReportComment
@@ -33,8 +34,10 @@ def scoped_reports(user):
         .all()
     )
 
-    if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+    if user.role == User.Role.PASTOR:
         return qs
+    if user.role == User.Role.STAFF:
+        return qs if has_staff_permission(user, "view_reports") else qs.none()
     if user.role == User.Role.FELLOWSHIP_LEADER:
         return qs.filter(cell__fellowship__leader=user)
     if user.role == User.Role.CELL_LEADER:
@@ -69,8 +72,13 @@ class CellReportViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def review(self, request, pk=None):
         report = self.get_object()
-        self._ensure_role(request.user, User.Role.FELLOWSHIP_LEADER, "Only fellowship leaders can review reports.")
-        if report.cell.fellowship.leader_id != request.user.id:
+        is_pastor = request.user.role == User.Role.PASTOR
+        is_staff_reviewer = request.user.role == User.Role.STAFF and has_staff_permission(request.user, "review_reports")
+        is_fellowship_reviewer = request.user.role == User.Role.FELLOWSHIP_LEADER
+
+        if not (is_pastor or is_staff_reviewer or is_fellowship_reviewer):
+            raise PermissionDenied("Only pastors, fellowship leaders, or authorized staff can review reports.")
+        if is_fellowship_reviewer and report.cell.fellowship.leader_id != request.user.id:
             raise PermissionDenied("You can only review reports in your fellowship.")
         if report.status != CellReport.Status.PENDING:
             return Response({"detail": "Only pending reports can be reviewed."}, status=status.HTTP_400_BAD_REQUEST)
@@ -151,10 +159,6 @@ class CellReportViewSet(viewsets.ModelViewSet):
 
     def _log(self, report, action, note=""):
         ReportActivityLog.objects.create(report=report, actor=self.request.user, action=action, note=note)
-
-    def _ensure_role(self, user, role, message):
-        if user.role != role:
-            raise PermissionDenied(message)
 
     def _update_report(self, report, **changes):
         for field, value in changes.items():

@@ -28,7 +28,13 @@ class MemberProfileSerializer(serializers.ModelSerializer):
             "cell_name",
             "is_baptised",
             "foundation_completed",
+            "is_first_timer",
+            "first_visit_date",
+            "follow_up_status",
+            "visitation_notes",
             "is_partner",
+            "partnership_date",
+            "partnership_level",
             "souls_won",
             "join_date",
             "last_attended",
@@ -61,6 +67,20 @@ class SoulWinningSerializer(serializers.ModelSerializer):
         MemberProfile.objects.filter(pk=record.member_id).update(souls_won=models.F("souls_won") + record.converts)
         record.member.refresh_from_db(fields=["souls_won"])
         return record
+
+
+class FirstTimerFollowUpSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MemberProfile
+        fields = ["id", "is_first_timer", "first_visit_date", "follow_up_status", "visitation_notes", "updated_at"]
+        read_only_fields = ["id", "updated_at"]
+
+
+class PartnershipUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MemberProfile
+        fields = ["id", "is_partner", "partnership_date", "partnership_level", "updated_at"]
+        read_only_fields = ["id", "updated_at"]
 
 
 class AttendanceSerializer(serializers.ModelSerializer):

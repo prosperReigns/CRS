@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.models import User
+from apps.accounts.responsibilities import has_staff_permission
 from .models import BibleStudyClass, Cell, Fellowship
 from .permissions import BibleStudyClassPermission, CellPermission, FellowshipPermission
 from .serializers import BibleStudyClassSerializer, CellSerializer, FellowshipSerializer
@@ -15,8 +16,10 @@ class FellowshipViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Fellowship.objects.select_related("leader").all()
 
-        if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role == User.Role.PASTOR:
             return qs
+        if user.role == User.Role.STAFF:
+            return qs if has_staff_permission(user, "manage_cells") else qs.none()
         if user.role == User.Role.FELLOWSHIP_LEADER:
             return qs.filter(leader=user)
         if user.role == User.Role.CELL_LEADER:
@@ -32,8 +35,10 @@ class CellViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Cell.objects.select_related("fellowship", "leader").all()
 
-        if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role == User.Role.PASTOR:
             return qs
+        if user.role == User.Role.STAFF:
+            return qs if has_staff_permission(user, "manage_cells") else qs.none()
         if user.role == User.Role.FELLOWSHIP_LEADER:
             return qs.filter(fellowship__leader=user)
         if user.role == User.Role.CELL_LEADER:
@@ -56,8 +61,10 @@ class BibleStudyClassViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = BibleStudyClass.objects.select_related("cell", "cell__fellowship", "teacher").all()
 
-        if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role == User.Role.PASTOR:
             return qs
+        if user.role == User.Role.STAFF:
+            return qs if has_staff_permission(user, "manage_cells") else qs.none()
         if user.role == User.Role.FELLOWSHIP_LEADER:
             return qs.filter(cell__fellowship__leader=user)
         if user.role == User.Role.CELL_LEADER:
