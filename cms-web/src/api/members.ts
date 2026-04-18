@@ -41,3 +41,45 @@ export const getServices = async (): Promise<ChurchService[]> => {
     throw new Error(getErrorMessage(error, "Failed to fetch services."));
   }
 };
+
+export const getFirstTimers = async (): Promise<Member[]> => {
+  try {
+    const response = await API.get<Member[] | { results: Member[] }>("members/profiles/first-timers/");
+    return toList(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch first timers."));
+  }
+};
+
+export const updateFirstTimerFollowUp = async (
+  memberId: number,
+  data: Partial<Pick<Member, "first_visit_date" | "follow_up_status" | "visitation_notes">>
+): Promise<Member> => {
+  try {
+    const response = await API.patch<Member>(`members/profiles/${memberId}/first-timer-follow-up/`, data);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update first timer follow-up."));
+  }
+};
+
+export const getPartners = async (): Promise<Member[]> => {
+  try {
+    const response = await API.get<Member[] | { results: Member[] }>("members/profiles/partners/");
+    return toList(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch partners."));
+  }
+};
+
+export const updatePartnerProfile = async (
+  memberId: number,
+  data: Partial<Pick<Member, "is_partner" | "partnership_date" | "partnership_level">>
+): Promise<Member> => {
+  try {
+    const response = await API.patch<Member>(`members/profiles/${memberId}/partnership/`, data);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update partnership profile."));
+  }
+};

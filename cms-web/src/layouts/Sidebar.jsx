@@ -1,17 +1,19 @@
 import { useContext } from "react";
 import { NavLink } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { canAccessCellMinistry, canAccessFirstTimers, canAccessPartnership, hasAnyStaffResponsibility } from "../utils/access";
 
 function Sidebar() {
   const { user } = useContext(AuthContext);
 
   if (!user) return null;
 
-  const canManageReports = ["pastor", "staff", "fellowship_leader"].includes(user.role);
-  const canViewDashboard = ["pastor", "staff"].includes(user.role);
+  const canManageReports = ["pastor", "fellowship_leader"].includes(user.role) || canAccessCellMinistry(user);
+  const canViewDashboard =
+    user.role === "pastor" || (user.role === "staff" ? hasAnyStaffResponsibility(user) : false);
   const canViewSettings = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
-  const canManageStructure = ["pastor", "staff", "fellowship_leader"].includes(user.role);
+  const canManageStructure = ["pastor", "fellowship_leader"].includes(user.role) || canAccessCellMinistry(user);
   const canAssignCellLeaders = ["pastor", "staff", "fellowship_leader"].includes(user.role);
   const canAssignFellowshipLeaders = ["pastor", "staff"].includes(user.role);
   const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
@@ -49,6 +51,18 @@ function Sidebar() {
       {canManageReports && !isFrozen && (
         <NavLink className={navClassName} to="/reports/manage">
           {user.role === "fellowship_leader" ? "Review Reports" : "Manage Reports"}
+        </NavLink>
+      )}
+
+      {canAccessFirstTimers(user) && !isFrozen && (
+        <NavLink className={navClassName} to="/first-timers">
+          First Timers
+        </NavLink>
+      )}
+
+      {canAccessPartnership(user) && !isFrozen && (
+        <NavLink className={navClassName} to="/partnership">
+          Partnership
         </NavLink>
       )}
 

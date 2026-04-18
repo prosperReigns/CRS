@@ -2,6 +2,7 @@ import { useState, useContext } from "react";
 import { loginUser } from "../../api/auth";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { hasAnyStaffResponsibility } from "../../utils/access";
 
 function Login() {
   const [form, setForm] = useState({ username: "", password: "" });
@@ -14,8 +15,9 @@ function Login() {
     if (currentUser?.is_frozen) return "/reports/submit";
     switch (currentUser?.role) {
       case "pastor":
-      case "staff":
         return "/dashboard";
+      case "staff":
+        return hasAnyStaffResponsibility(currentUser) ? "/dashboard" : "/settings";
       case "fellowship_leader":
         return "/settings";
       case "cell_leader":
