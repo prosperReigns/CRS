@@ -159,3 +159,32 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data["new_password"])
         user.save(update_fields=["password"])
         return user
+
+
+class AssignCellLeaderSerializer(serializers.Serializer):
+    member_id = serializers.IntegerField(min_value=1)
+    cell_id = serializers.IntegerField(min_value=1)
+
+
+class AssignFellowshipLeaderSerializer(serializers.Serializer):
+    member_id = serializers.IntegerField(min_value=1)
+    fellowship_id = serializers.IntegerField(min_value=1)
+
+
+class CreateLeaderSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=[User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER])
+    username = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    password = serializers.CharField(required=False, allow_blank=True, write_only=True, min_length=8)
+    fellowship_id = serializers.IntegerField(required=False, min_value=1)
+    cell_id = serializers.IntegerField(required=False, min_value=1)
+
+    def validate(self, attrs):
+        role = attrs.get("role")
+        if role == User.Role.FELLOWSHIP_LEADER and not attrs.get("fellowship_id"):
+            raise serializers.ValidationError({"fellowship_id": "fellowship_id is required for fellowship leaders."})
+        if role == User.Role.CELL_LEADER and not attrs.get("cell_id"):
+            raise serializers.ValidationError({"cell_id": "cell_id is required for cell leaders."})
+        return attrs

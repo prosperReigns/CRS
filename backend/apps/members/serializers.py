@@ -10,7 +10,7 @@ User = get_user_model()
 class MemberMiniUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "role"]
+        fields = ["id", "username", "first_name", "last_name", "role", "is_active", "is_frozen"]
 
 
 class MemberProfileSerializer(serializers.ModelSerializer):
