@@ -4,10 +4,10 @@ import { getMembers } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
 import { inferReportTypeFromDate, REPORT_TYPE_OPTIONS } from "./reportType";
 
-function SubmitReport() {
-  const isMemberAttendeeId = (id) => typeof id === "number";
-  const isCustomAttendeeId = (id) => typeof id === "string";
+const isMemberAttendeeId = (id) => typeof id === "number";
+const isCustomAttendeeId = (id) => typeof id === "string";
 
+function SubmitReport() {
   const { user } = useContext(AuthContext);
   const [form, setForm] = useState({
     cell: "",

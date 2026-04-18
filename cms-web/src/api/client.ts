@@ -38,6 +38,7 @@ export const registerUnauthorizedHandler = (handler: UnauthorizedHandler) => {
 };
 
 export const getErrorMessage = (error: unknown, fallback: string): string => {
+  // Keep recursion bounded while still covering common DRF/axios nested error shapes.
   const MAX_ERROR_EXTRACTION_DEPTH = 8;
   const seenObjects = new WeakSet<object>();
   const extractMessage = (value: unknown, depth = 0): string | undefined => {
