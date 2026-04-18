@@ -1,0 +1,232 @@
+import { useEffect, useState } from "react";
+import {
+  approveVisitationReport,
+  getFirstTimers,
+  getVisitationReports,
+  updateFirstTimerFollowUp,
+} from "../../api/members";
+import { getUsers } from "../../api/users";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorState from "../../components/ui/ErrorState";
+import EmptyState from "../../components/ui/EmptyState";
+
+const followUpOptions = ["pending", "contacted", "visited", "integrated"];
+const methodLabels = {
+  calling: "Calling",
+  one_on_one_visitation: "One on One Visitation",
+};
+
+function Visitation() {
+  const [members, setMembers] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [savingId, setSavingId] = useState(null);
+  const [approvingId, setApprovingId] = useState(null);
+  const [fellowshipLeaders, setFellowshipLeaders] = useState([]);
+  const [cellLeaders, setCellLeaders] = useState([]);
+
+  const fetchData = async () => {
+    try {
+      const [membersData, users, reportData] = await Promise.all([getFirstTimers(), getUsers(), getVisitationReports()]);
+      setFellowshipLeaders(users.filter((candidate) => candidate.role === "fellowship_leader"));
+      setCellLeaders(users.filter((candidate) => candidate.role === "cell_leader"));
+      setMembers(
+        membersData.map((member) => ({
+          ...member,
+          visitation_fellowship_leader: member.visitation_fellowship_leader ?? null,
+          visitation_cell_leader: member.visitation_cell_leader ?? null,
+        }))
+      );
+      setReports(reportData);
+    } catch (err) {
+      setError(err.message || "Failed to load visitation records.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const updateField = (id, field, value) => {
+    setMembers((prev) => prev.map((member) => (member.id === id ? { ...member, [field]: value } : member)));
+  };
+
+  const saveMember = async (member) => {
+    setSavingId(member.id);
+    setError("");
+    try {
+      await updateFirstTimerFollowUp(member.id, {
+        first_visit_date: member.first_visit_date || null,
+        follow_up_status: member.follow_up_status || "",
+        visitation_notes: member.visitation_notes || "",
+        visitation_fellowship_leader: member.visitation_fellowship_leader || null,
+        visitation_cell_leader: member.visitation_cell_leader || null,
+      });
+    } catch (err) {
+      setError(err.message || "Failed to update visitation assignment.");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const approveReport = async (reportId) => {
+    setApprovingId(reportId);
+    setError("");
+    try {
+      await approveVisitationReport(reportId);
+      setReports((prev) =>
+        prev.map((report) =>
+          report.id === reportId ? { ...report, status: "approved", approved_at: new Date().toISOString() } : report
+        )
+      );
+    } catch (err) {
+      setError(err.message || "Failed to approve visitation report.");
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  if (loading) return <LoadingState label="Loading visitation..." />;
+  if (error) return <ErrorState error={error} />;
+
+  return (
+    <div className="space-y-6">
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold text-slate-900">Visitation</h2>
+        {members.length === 0 ? (
+          <EmptyState label="No first timer records found." />
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {members.map((member) => (
+              <div key={member.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-lg font-semibold text-slate-900">{member.user?.username}</p>
+                <div className="mt-3 grid gap-3">
+                  <label className="text-sm text-slate-700">
+                    First Visit Date
+                    <input
+                      type="date"
+                      value={member.first_visit_date || ""}
+                      onChange={(event) => updateField(member.id, "first_visit_date", event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm text-slate-700">
+                    Follow-up Status
+                    <select
+                      value={member.follow_up_status || ""}
+                      onChange={(event) => updateField(member.id, "follow_up_status", event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="">Select status</option>
+                      {followUpOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm text-slate-700">
+                    Assigned Fellowship Leader
+                    <select
+                      value={member.visitation_fellowship_leader ?? ""}
+                      onChange={(event) =>
+                        updateField(
+                          member.id,
+                          "visitation_fellowship_leader",
+                          event.target.value ? Number(event.target.value) : null
+                        )
+                      }
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="">Unassigned</option>
+                      {fellowshipLeaders.map((leader) => (
+                        <option key={leader.id} value={leader.id}>
+                          {[leader.first_name, leader.last_name].filter(Boolean).join(" ") || leader.username}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm text-slate-700">
+                    Assigned Cell Leader
+                    <select
+                      value={member.visitation_cell_leader ?? ""}
+                      onChange={(event) =>
+                        updateField(member.id, "visitation_cell_leader", event.target.value ? Number(event.target.value) : null)
+                      }
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="">Unassigned</option>
+                      {cellLeaders.map((leader) => (
+                        <option key={leader.id} value={leader.id}>
+                          {[leader.first_name, leader.last_name].filter(Boolean).join(" ") || leader.username}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm text-slate-700">
+                    Notes
+                    <textarea
+                      value={member.visitation_notes || ""}
+                      onChange={(event) => updateField(member.id, "visitation_notes", event.target.value)}
+                      rows={3}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => saveMember(member)}
+                    disabled={savingId === member.id}
+                    className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                  >
+                    {savingId === member.id ? "Saving..." : "Save Assignment"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="text-xl font-semibold text-slate-900">Submitted Visitation Reports</h3>
+        {reports.length === 0 ? (
+          <EmptyState label="No visitation reports submitted yet." />
+        ) : (
+          <div className="space-y-3">
+            {reports.map((report) => (
+              <div key={report.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                <p className="font-semibold text-slate-900">{report.member_name}</p>
+                <p className="text-slate-600">Leader: {report.leader_name}</p>
+                <p className="text-slate-600">
+                  Date: {report.visitation_date} {report.visitation_time}
+                </p>
+                <p className="text-slate-600">Method: {methodLabels[report.method_used] || report.method_used}</p>
+                <p className="text-slate-700">Comment: {report.comment}</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className={`text-xs font-medium ${report.status === "approved" ? "text-emerald-700" : "text-amber-700"}`}>
+                    {report.status === "approved" ? "Approved" : "Pending Review"}
+                  </span>
+                  {report.status === "pending" && (
+                    <button
+                      type="button"
+                      onClick={() => approveReport(report.id)}
+                      disabled={approvingId === report.id}
+                      className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-70"
+                    >
+                      {approvingId === report.id ? "Approving..." : "Approve"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+export default Visitation;
