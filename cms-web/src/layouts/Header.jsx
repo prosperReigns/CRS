@@ -9,9 +9,11 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
   const { user, logout } = useContext(AuthContext);
   const [notifications, setNotifications] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const [notificationError, setNotificationError] = useState("");
   const notificationMenuRef = useRef(null);
   const notificationButtonRef = useRef(null);
+  const notificationDialogRef = useRef(null);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.is_read).length,
@@ -54,6 +56,10 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
+        if (selectedNotification) {
+          setSelectedNotification(null);
+          return;
+        }
         setMenuOpen(false);
       }
     };
@@ -64,7 +70,15 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [menuOpen]);
+  }, [menuOpen, selectedNotification]);
+
+  useEffect(() => {
+    if (!selectedNotification || !notificationDialogRef.current) return;
+    const firstFocusable = notificationDialogRef.current.querySelector(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    firstFocusable?.focus();
+  }, [selectedNotification]);
 
   const handleMarkRead = async (notificationId) => {
     try {
@@ -74,8 +88,10 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
           notification.id === notificationId ? { ...notification, is_read: true } : notification
         )
       );
+      return true;
     } catch (error) {
       setNotificationError(error.message || "Failed to mark notification as read.");
+      return false;
     }
   };
 
@@ -85,6 +101,38 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
       setNotifications((prev) => prev.map((notification) => ({ ...notification, is_read: true })));
     } catch (error) {
       setNotificationError(error.message || "Failed to mark all notifications as read.");
+    }
+  };
+
+  const handleOpenNotification = async (notification) => {
+    if (!notification.is_read) {
+      await handleMarkRead(notification.id);
+      setSelectedNotification(notification);
+      return;
+    }
+    setSelectedNotification(notification);
+  };
+
+  const handleDialogKeyDown = (event) => {
+    if (event.key !== "Tab" || !notificationDialogRef.current) return;
+    const focusableElements = notificationDialogRef.current.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusableElements.length) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    const activeElement = document.activeElement;
+
+    if (event.shiftKey && activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+      return;
+    }
+
+    if (!event.shiftKey && activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
     }
   };
 
@@ -154,13 +202,14 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
                   key={notification.id}
                   role="menuitem"
                   tabIndex={0}
+                  onClick={() => handleOpenNotification(notification)}
                   onKeyDown={(event) => {
-                    if ((event.key === "Enter" || event.key === " ") && !notification.is_read) {
+                    if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      handleMarkRead(notification.id);
+                      handleOpenNotification(notification);
                     }
                   }}
-                  className={`rounded-md border p-2 text-sm ${
+                  className={`cursor-pointer rounded-md border p-2 text-sm transition-colors hover:border-brand-300 hover:bg-brand-50 ${
                     notification.is_read
                       ? "border-slate-200 bg-slate-50 text-slate-600"
                       : "border-brand-200 bg-brand-50 text-slate-800"
@@ -171,7 +220,10 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
                     {!notification.is_read && (
                       <button
                         className="text-xs font-medium text-brand-600 hover:text-brand-700"
-                        onClick={() => handleMarkRead(notification.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleMarkRead(notification.id);
+                        }}
                       >
                         Mark read
                       </button>
@@ -183,6 +235,44 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
             </div>
           )}
         </div>
+
+        {selectedNotification && (
+          <div
+            className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4"
+            onClick={() => setSelectedNotification(null)}
+            role="presentation"
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={`notification-title-${selectedNotification.id}`}
+              className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-5 shadow-xl"
+              ref={notificationDialogRef}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={handleDialogKeyDown}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3
+                    id={`notification-title-${selectedNotification.id}`}
+                    className="text-lg font-semibold text-slate-900"
+                  >
+                    {selectedNotification.title}
+                  </h3>
+                  <p className="text-xs text-slate-500">{selectedNotification.category}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedNotification(null)}
+                  className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  Close
+                </button>
+              </div>
+              <p className="mt-4 text-sm text-slate-700">{selectedNotification.message}</p>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={logout}
