@@ -59,7 +59,8 @@ const readStoredDocuments = () => {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return normalizeDocuments(parsed);
-  } catch {
+  } catch (storageError) {
+    console.warn("Unable to load stored financial documents.", storageError);
     return [];
   }
 };
@@ -227,7 +228,7 @@ function Partnership() {
     <div className="space-y-6">
       <div className="space-y-4">
         <h2 className="text-2xl font-bold text-slate-900">Partnership</h2>
-        <ErrorState error={error} />
+        {error && <ErrorState error={error} />}
 
         {partners.length === 0 ? (
           <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
