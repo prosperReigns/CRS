@@ -189,6 +189,8 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
     def _sync_first_timer_profiles(*, meeting_date, first_timer_ids):
         if not first_timer_ids:
             return
+        # Keep the earliest known first visit date to support correcting records
+        # when a first-timer is identified from an earlier report submission.
         MemberProfile.objects.filter(id__in=first_timer_ids).update(
             is_first_timer=True,
             first_visit_date=Case(
