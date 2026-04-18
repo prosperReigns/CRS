@@ -9,6 +9,7 @@ import {
 import ErrorState from "../../components/ui/ErrorState";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import Button from "../../components/ui/Button";
+import { getReportTypeLabel } from "./reportType";
 
 function ReportDetail({ report, refresh }) {
   const { user } = useContext(AuthContext);
@@ -82,6 +83,7 @@ function ReportDetail({ report, refresh }) {
         <p><strong>Fellowship:</strong> {report.fellowship_name || "-"}</p>
         <p><strong>Cell:</strong> {report.cell_name || report.cell}</p>
         <p><strong>Date:</strong> {report.meeting_date}</p>
+        <p><strong>Report Type:</strong> {getReportTypeLabel(report.report_type)}</p>
         <p><strong>Attendance:</strong> {report.attendance_count}</p>
         <p>
         <strong>Attendees:</strong>{" "}

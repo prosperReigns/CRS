@@ -70,6 +70,7 @@ class CellReportSerializer(serializers.ModelSerializer):
             "submitted_by",
             "author",
             "meeting_date",
+            "report_type",
             "service",
             "service_name",
             "attendees",
@@ -128,6 +129,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             "id",
             "cell",
             "meeting_date",
+            "report_type",
             "service",
             "attendees",
             "attendee_names",
@@ -245,6 +247,19 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 {"service": f"Selected service runs on {service.day_of_week}, but meeting date is {meeting_date.strftime('%A')}."}
             )
 
+        report_type = attrs.get("report_type", getattr(self.instance, "report_type", None))
+        if meeting_date and report_type:
+            expected_type = CellReport.infer_report_type(meeting_date)
+            if report_type != expected_type:
+                raise serializers.ValidationError(
+                    {
+                        "report_type": (
+                            f"Invalid report type for the selected date. "
+                            f"Expected: {CellReport.ReportType(expected_type).label}."
+                        )
+                    }
+                )
+
         return attrs
 
     @transaction.atomic
@@ -263,6 +278,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
 
         if rejected_report:
             rejected_report.service = validated_data.get("service")
+            rejected_report.report_type = validated_data["report_type"]
             rejected_report.new_members = validated_data["new_members"]
             rejected_report.offering_amount = validated_data["offering_amount"]
             rejected_report.summary = validated_data["summary"]
@@ -276,6 +292,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             rejected_report.save(
                 update_fields=[
                     "service",
+                    "report_type",
                     "new_members",
                     "offering_amount",
                     "summary",

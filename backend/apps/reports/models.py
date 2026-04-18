@@ -15,10 +15,21 @@ class CellReport(models.Model):
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
 
+    class ReportType(models.TextChoices):
+        WEEK1_PRAYER_AND_PLANNING = "week1_prayer_planning", "Week 1 - Prayer and Planning"
+        WEEK2_BIBLE_STUDY = "week2_bible_study", "Week 2 - Bible Study"
+        WEEK3_BIBLE_STUDY = "week3_bible_study", "Week 3 - Bible Study"
+        WEEK4_OUTREACH = "week4_outreach", "Week 4 - Outreach"
+
     cell = models.ForeignKey(Cell, on_delete=models.CASCADE, related_name="reports")
     submitted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="submitted_reports")
     leader = models.ForeignKey(User, on_delete=models.CASCADE)
     meeting_date = models.DateField(db_index=True)
+    report_type = models.CharField(
+        max_length=32,
+        choices=ReportType.choices,
+        default=ReportType.WEEK1_PRAYER_AND_PLANNING,
+    )
     service = models.ForeignKey(ChurchService, null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
     attendees = models.ManyToManyField(MemberProfile, related_name="cell_reports")
     attendance_count = models.PositiveIntegerField(default=0)
@@ -58,6 +69,17 @@ class CellReport(models.Model):
 
     def __str__(self):
         return f"{self.cell.name} - {self.meeting_date}"
+
+    @classmethod
+    def infer_report_type(cls, meeting_date):
+        week_of_month = ((meeting_date.day - 1) // 7) + 1
+        if week_of_month <= 1:
+            return cls.ReportType.WEEK1_PRAYER_AND_PLANNING
+        if week_of_month == 2:
+            return cls.ReportType.WEEK2_BIBLE_STUDY
+        if week_of_month == 3:
+            return cls.ReportType.WEEK3_BIBLE_STUDY
+        return cls.ReportType.WEEK4_OUTREACH
 
     def sync_attendance_count(self, *, save=True):
         self.attendance_count = self.attendees.count()

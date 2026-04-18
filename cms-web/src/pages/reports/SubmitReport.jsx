@@ -2,12 +2,14 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { createReport } from "../../api/reports";
 import { getMembers } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
+import { inferReportTypeFromDate, REPORT_TYPE_OPTIONS } from "./reportType";
 
 function SubmitReport() {
   const { user } = useContext(AuthContext);
   const [form, setForm] = useState({
     cell: "",
     meeting_date: "",
+    report_type: "",
     new_members: "",
     offering_amount: "",
     summary: "",
@@ -85,6 +87,7 @@ function SubmitReport() {
     const formData = new FormData();
     formData.append("cell", form.cell);
     formData.append("meeting_date", form.meeting_date);
+    formData.append("report_type", form.report_type);
     formData.append("new_members", form.new_members || "0");
     formData.append("offering_amount", form.offering_amount);
     formData.append("summary", form.summary);
@@ -99,12 +102,13 @@ function SubmitReport() {
     try {
       await createReport(formData);
       setSuccess("Report submitted successfully.");
-      setForm({
-        cell: form.cell,
-        meeting_date: "",
-        new_members: "",
-        offering_amount: "",
-        summary: "",
+        setForm({
+          cell: form.cell,
+          meeting_date: "",
+          report_type: "",
+          new_members: "",
+          offering_amount: "",
+          summary: "",
         attendee_names: "",
       });
       setAttendees([]);
@@ -159,9 +163,32 @@ function SubmitReport() {
         type="date"
         className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={form.meeting_date}
-        onChange={(e) => setForm({ ...form, meeting_date: e.target.value })}
+        onChange={(e) =>
+          setForm({
+            ...form,
+            meeting_date: e.target.value,
+            report_type: inferReportTypeFromDate(e.target.value),
+          })
+        }
         required
       />
+
+      <label className="block space-y-1">
+        <span className="text-sm font-medium text-slate-700">Report Type</span>
+        <select
+          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          value={form.report_type}
+          onChange={(e) => setForm({ ...form, report_type: e.target.value })}
+          required
+        >
+          <option value="">Select report type</option>
+          {REPORT_TYPE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <input
         placeholder="Search members..."
