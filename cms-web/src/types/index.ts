@@ -5,6 +5,7 @@ export interface User {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  home_address?: string | null;
   bio?: string | null;
   profile_picture?: string | null;
   role: "admin" | "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";

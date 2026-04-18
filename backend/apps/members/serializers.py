@@ -10,7 +10,19 @@ User = get_user_model()
 class MemberMiniUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "role", "is_active", "is_frozen"]
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "home_address",
+            "profile_picture",
+            "role",
+            "is_active",
+            "is_frozen",
+        ]
 
 
 class MemberProfileSerializer(serializers.ModelSerializer):
@@ -43,7 +55,7 @@ class MemberProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "souls_won", "created_at", "updated_at", "cell_name", "user"]
+        read_only_fields = ["id", "created_at", "updated_at", "cell_name", "user"]
 
     def validate_visitation_fellowship_leader(self, value):
         if value and value.role != User.Role.FELLOWSHIP_LEADER:
