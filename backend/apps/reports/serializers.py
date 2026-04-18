@@ -1,6 +1,7 @@
 from django.db import IntegrityError, transaction
 from django.db.models import Case, DateField, F, Value, When
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from apps.accounts.models import User
 from apps.members.models import MemberProfile
@@ -134,7 +135,13 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             "images",
         ]
         read_only_fields = ["id"]
-        validators = []
+        validators = [
+            UniqueTogetherValidator(
+                queryset=CellReport.objects.exclude(status=CellReport.Status.REJECTED),
+                fields=["cell", "meeting_date"],
+                message="A report for this cell and meeting date already exists.",
+            )
+        ]
 
     def _extract_images(self):
         request = self.context["request"]
