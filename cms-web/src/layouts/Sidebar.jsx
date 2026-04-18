@@ -38,8 +38,11 @@ function Sidebar({ isOpen, onToggle }) {
         {isOpen ? "Hide Sidebar" : "Show Sidebar"}
       </button>
 
-      {isOpen && (
-        <aside id="app-sidebar-navigation" className="w-64 p-4 pt-0">
+      <aside
+        id="app-sidebar-navigation"
+        aria-hidden={!isOpen}
+        className={`w-64 p-4 pt-0 ${isOpen ? "block" : "hidden"}`}
+      >
       <h3 className="mb-5 text-lg font-bold tracking-wide">ChurchSys</h3>
 
       {canViewDashboard && !isFrozen && (
@@ -116,8 +119,7 @@ function Sidebar({ isOpen, onToggle }) {
           Settings
         </NavLink>
       )}
-        </aside>
-      )}
+      </aside>
     </div>
   );
 }

@@ -170,9 +170,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 return True
 
         error_text = str(exc).lower()
-        return "uniq_report_per_cell_per_date" in error_text or (
-            "unique constraint failed: reports_cellreport.cell_id, reports_cellreport.meeting_date" in error_text
-        )
+        return "uniq_report_per_cell_per_date" in error_text
 
     def validate(self, attrs):
         request = self.context["request"]
