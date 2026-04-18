@@ -120,6 +120,8 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
 
 class UserSettingsSerializer(serializers.ModelSerializer):
     cell_meeting_venue = serializers.CharField(required=False, allow_blank=True)
+    cell_name = serializers.CharField(required=False, allow_blank=True)
+    fellowship_name = serializers.CharField(required=False, allow_blank=True)
     responsibilities = serializers.SerializerMethodField()
 
     class Meta:
@@ -136,6 +138,8 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             "role",
             "responsibilities",
             "cell_meeting_venue",
+            "cell_name",
+            "fellowship_name",
         ]
         read_only_fields = ["id", "username", "role", "responsibilities"]
 
@@ -153,8 +157,22 @@ class UserSettingsSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         cell = self._get_linked_cell(instance)
+        fellowship = self._get_linked_fellowship(instance)
         data["cell_meeting_venue"] = cell.venue if cell else ""
+        data["cell_name"] = cell.name if cell else ""
+        data["fellowship_name"] = fellowship.name if fellowship else ""
         return data
+
+    def _get_linked_fellowship(self, user):
+        led_fellowship = user.led_fellowships.order_by("id").first()
+        if led_fellowship:
+            return led_fellowship
+
+        linked_cell = self._get_linked_cell(user)
+        if linked_cell and linked_cell.fellowship_id:
+            return linked_cell.fellowship
+
+        return None
 
     def get_responsibilities(self, obj):
         prefetched = getattr(obj, "_prefetched_objects_cache", {}).get("staff_responsibilities")
@@ -169,6 +187,36 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             cell = self._get_linked_cell(self.instance)
             if not cell:
                 raise serializers.ValidationError({"cell_meeting_venue": "No linked cell found for this account."})
+        if "cell_name" in attrs:
+            if not attrs["cell_name"].strip():
+                raise serializers.ValidationError({"cell_name": "Cell name cannot be empty."})
+            cell = self._get_linked_cell(self.instance)
+            if not cell:
+                raise serializers.ValidationError({"cell_name": "No linked cell found for this account."})
+            normalized_cell_name = attrs["cell_name"].strip()
+            duplicate_cell_exists = (
+                cell.__class__.objects.filter(fellowship=cell.fellowship, name__iexact=normalized_cell_name)
+                .exclude(pk=cell.pk)
+                .exists()
+            )
+            if duplicate_cell_exists:
+                raise serializers.ValidationError(
+                    {"cell_name": "A cell with this name already exists in your fellowship."}
+                )
+        if "fellowship_name" in attrs:
+            if not attrs["fellowship_name"].strip():
+                raise serializers.ValidationError({"fellowship_name": "Fellowship name cannot be empty."})
+            fellowship = self._get_linked_fellowship(self.instance)
+            if not fellowship:
+                raise serializers.ValidationError({"fellowship_name": "No linked fellowship found for this account."})
+            normalized_fellowship_name = attrs["fellowship_name"].strip()
+            duplicate_fellowship_exists = (
+                fellowship.__class__.objects.filter(name__iexact=normalized_fellowship_name)
+                .exclude(pk=fellowship.pk)
+                .exists()
+            )
+            if duplicate_fellowship_exists:
+                raise serializers.ValidationError({"fellowship_name": "A fellowship with this name already exists."})
         return attrs
 
     def validate_profile_picture(self, value):
@@ -184,6 +232,8 @@ class UserSettingsSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         cell_meeting_venue = validated_data.pop("cell_meeting_venue", MISSING)
+        cell_name = validated_data.pop("cell_name", MISSING)
+        fellowship_name = validated_data.pop("fellowship_name", MISSING)
         updated_user = super().update(instance, validated_data)
 
         if cell_meeting_venue is not MISSING:
@@ -192,6 +242,20 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             if cell and normalized_venue and cell.venue != normalized_venue:
                 cell.venue = normalized_venue
                 cell.save(update_fields=["venue"])
+
+        if cell_name is not MISSING:
+            cell = self._get_linked_cell(updated_user)
+            normalized_cell_name = cell_name.strip()
+            if cell and normalized_cell_name and cell.name != normalized_cell_name:
+                cell.name = normalized_cell_name
+                cell.save(update_fields=["name"])
+
+        if fellowship_name is not MISSING:
+            fellowship = self._get_linked_fellowship(updated_user)
+            normalized_fellowship_name = fellowship_name.strip()
+            if fellowship and normalized_fellowship_name and fellowship.name != normalized_fellowship_name:
+                fellowship.name = normalized_fellowship_name
+                fellowship.save(update_fields=["name"])
 
         return updated_user
 

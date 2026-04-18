@@ -14,6 +14,13 @@ export interface User {
   date_joined?: string;
 }
 
+export interface StaffResponsibility {
+  id: number;
+  name: string;
+  code: string;
+  description: string;
+}
+
 export interface Member {
   id: number;
   user: User;
@@ -88,6 +95,7 @@ export interface Report {
   meeting_date: string;
   attendees: ReportAttendee[];
   attendance_count: number;
+  attendee_names?: string;
   new_members: number;
   offering_amount: string;
   summary: string;

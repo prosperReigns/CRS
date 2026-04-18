@@ -22,6 +22,7 @@ class CellReport(models.Model):
     service = models.ForeignKey(ChurchService, null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
     attendees = models.ManyToManyField(MemberProfile, related_name="cell_reports")
     attendance_count = models.PositiveIntegerField(default=0)
+    attendee_names = models.TextField(blank=True)
     new_members = models.PositiveIntegerField(default=0)
     offering_amount = models.DecimalField(max_digits=12, decimal_places=2)
     summary = models.TextField()
