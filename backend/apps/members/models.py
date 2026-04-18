@@ -23,6 +23,20 @@ class MemberProfile(models.Model):
     first_visit_date = models.DateField(null=True, blank=True)
     follow_up_status = models.CharField(max_length=50, blank=True)
     visitation_notes = models.TextField(blank=True)
+    visitation_fellowship_leader = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_first_timers_as_fellowship_leader",
+    )
+    visitation_cell_leader = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_first_timers_as_cell_leader",
+    )
     is_partner = models.BooleanField(default=False)
     partnership_date = models.DateField(null=True, blank=True)
     partnership_level = models.CharField(max_length=50, blank=True)

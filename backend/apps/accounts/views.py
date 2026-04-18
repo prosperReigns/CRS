@@ -9,8 +9,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.members.models import MemberProfile
 from apps.structure.models import Cell, Fellowship
-from .models import User
+from .models import StaffResponsibility, User
 from .permissions import IsPastorOrStaff, IsSelfOrPastorOrStaff
+from .responsibilities import has_staff_permission
 from .services import assign_cell_leader, assign_fellowship_leader, create_leader_account
 from .serializers import (
     AssignCellLeaderSerializer,
@@ -18,6 +19,7 @@ from .serializers import (
     ChangePasswordSerializer,
     CreateLeaderSerializer,
     LoginTokenSerializer,
+    StaffResponsibilitySerializer,
     UserCreateSerializer,
     UserSerializer,
     UserSettingsSerializer,
@@ -73,9 +75,21 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.request.user
         role = serializer.validated_data.get("role")
 
-        if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role == User.Role.PASTOR:
             serializer.save()
             return
+        if user.role == User.Role.STAFF:
+            if role in {User.Role.CELL_LEADER, User.Role.FELLOWSHIP_LEADER}:
+                if not has_staff_permission(user, "manage_cells"):
+                    raise PermissionDenied(
+                        "Only staff with cell ministry responsibility can create fellowship leader or cell leader accounts."
+                    )
+                serializer.save()
+                return
+            if role == User.Role.MEMBER:
+                serializer.save()
+                return
+            raise PermissionDenied("Staff can only create member, fellowship leader, or cell leader accounts.")
         if user.role == User.Role.FELLOWSHIP_LEADER and role == User.Role.CELL_LEADER:
             serializer.save()
             return
@@ -213,3 +227,29 @@ class CreateLeaderView(APIView):
             assigned_by=request.user,
         )
         return Response(data, status=201)
+
+
+class StaffResponsibilityViewSet(viewsets.ModelViewSet):
+    serializer_class = StaffResponsibilitySerializer
+    queryset = StaffResponsibility.objects.all().order_by("name")
+    permission_classes = [IsAuthenticated]
+
+    def _ensure_pastor(self):
+        if self.request.user.role != User.Role.PASTOR:
+            raise PermissionDenied("Only pastors can manage staff responsibilities.")
+
+    def create(self, request, *args, **kwargs):
+        self._ensure_pastor()
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self._ensure_pastor()
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        self._ensure_pastor()
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        self._ensure_pastor()
+        return super().destroy(request, *args, **kwargs)

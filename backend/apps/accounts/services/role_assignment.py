@@ -5,6 +5,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.members.models import MemberProfile
 from apps.structure.models import Cell, Fellowship
+from ..responsibilities import has_staff_permission
 from ..models import User
 
 MAX_USERNAME_LENGTH = 150
@@ -72,6 +73,8 @@ def _demote_if_unassigned(previous_leader):
 def assign_cell_leader(member_profile, cell, assigned_by):
     if assigned_by.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR, User.Role.STAFF}:
         raise PermissionDenied("You are not allowed to assign cell leaders.")
+    if assigned_by.role == User.Role.STAFF and not has_staff_permission(assigned_by, "manage_cells"):
+        raise PermissionDenied("Only staff with cell ministry responsibility can assign cell leaders.")
     if assigned_by.role == User.Role.FELLOWSHIP_LEADER and cell.fellowship.leader_id != assigned_by.id:
         raise PermissionDenied("You can only assign cell leaders in your fellowship.")
 
@@ -102,6 +105,8 @@ def assign_cell_leader(member_profile, cell, assigned_by):
 def assign_fellowship_leader(member_profile, fellowship, assigned_by):
     if assigned_by.role not in {User.Role.PASTOR, User.Role.STAFF}:
         raise PermissionDenied("Only pastor or staff can assign fellowship leaders.")
+    if assigned_by.role == User.Role.STAFF and not has_staff_permission(assigned_by, "manage_cells"):
+        raise PermissionDenied("Only staff with cell ministry responsibility can assign fellowship leaders.")
 
     user, temporary_password = _ensure_user_for_member(member_profile)
     previous_leader = fellowship.leader if fellowship.leader_id and fellowship.leader_id != user.id else None
@@ -127,6 +132,8 @@ def _validate_leader_creation_permissions(role, assigned_by):
         raise PermissionDenied("Only pastor or staff can create fellowship leaders.")
     if role == User.Role.CELL_LEADER and assigned_by.role not in {User.Role.PASTOR, User.Role.STAFF, User.Role.FELLOWSHIP_LEADER}:
         raise PermissionDenied("You are not allowed to create cell leaders.")
+    if assigned_by.role == User.Role.STAFF and not has_staff_permission(assigned_by, "manage_cells"):
+        raise PermissionDenied("Only staff with cell ministry responsibility can create leader accounts.")
 
 
 @transaction.atomic

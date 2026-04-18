@@ -14,8 +14,8 @@ function Sidebar() {
   const canViewSettings = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageStructure = ["pastor", "fellowship_leader"].includes(user.role) || canAccessCellMinistry(user);
-  const canAssignCellLeaders = ["pastor", "staff", "fellowship_leader"].includes(user.role);
-  const canAssignFellowshipLeaders = ["pastor", "staff"].includes(user.role);
+  const canAssignCellLeaders = user.role === "pastor" || user.role === "fellowship_leader" || canAccessCellMinistry(user);
+  const canAssignFellowshipLeaders = user.role === "pastor" || canAccessCellMinistry(user);
   const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
     user.role
   );

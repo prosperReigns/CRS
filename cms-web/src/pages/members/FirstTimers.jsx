@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getFirstTimers, updateFirstTimerFollowUp } from "../../api/members";
+import { getUsers } from "../../api/users";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
@@ -11,10 +12,19 @@ function FirstTimers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState(null);
+  const [fellowshipLeaders, setFellowshipLeaders] = useState([]);
+  const [cellLeaders, setCellLeaders] = useState([]);
 
   const fetchMembers = async () => {
     try {
-      const data = await getFirstTimers();
+      const [membersData, users] = await Promise.all([getFirstTimers(), getUsers()]);
+      setFellowshipLeaders(users.filter((candidate) => candidate.role === "fellowship_leader"));
+      setCellLeaders(users.filter((candidate) => candidate.role === "cell_leader"));
+      const data = membersData.map((member) => ({
+        ...member,
+        visitation_fellowship_leader: member.visitation_fellowship_leader ?? null,
+        visitation_cell_leader: member.visitation_cell_leader ?? null,
+      }));
       setMembers(data);
     } catch (err) {
       setError(err.message || "Failed to load first timers.");
@@ -39,6 +49,8 @@ function FirstTimers() {
         first_visit_date: member.first_visit_date || null,
         follow_up_status: member.follow_up_status || "",
         visitation_notes: member.visitation_notes || "",
+        visitation_fellowship_leader: member.visitation_fellowship_leader || null,
+        visitation_cell_leader: member.visitation_cell_leader || null,
       });
     } catch (err) {
       setError(err.message || "Failed to update follow-up.");
@@ -96,13 +108,51 @@ function FirstTimers() {
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
               </label>
+              <label className="text-sm text-slate-700">
+                Assigned Fellowship Leader for Visitation
+                <select
+                  value={member.visitation_fellowship_leader ?? ""}
+                  onChange={(event) =>
+                    updateField(
+                      member.id,
+                      "visitation_fellowship_leader",
+                      event.target.value ? Number(event.target.value) : null
+                    )
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Unassigned</option>
+                  {fellowshipLeaders.map((leader) => (
+                    <option key={leader.id} value={leader.id}>
+                      {[leader.first_name, leader.last_name].filter(Boolean).join(" ") || leader.username}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm text-slate-700">
+                Assigned Cell Leader for Visitation
+                <select
+                  value={member.visitation_cell_leader ?? ""}
+                  onChange={(event) =>
+                    updateField(member.id, "visitation_cell_leader", event.target.value ? Number(event.target.value) : null)
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Unassigned</option>
+                  {cellLeaders.map((leader) => (
+                    <option key={leader.id} value={leader.id}>
+                      {[leader.first_name, leader.last_name].filter(Boolean).join(" ") || leader.username}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 type="button"
                 onClick={() => saveMember(member)}
                 disabled={savingId === member.id}
                 className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
-                {savingId === member.id ? "Saving..." : "Save Follow-up"}
+                {savingId === member.id ? "Saving..." : "Save Detailed Visitation Report"}
               </button>
             </div>
           </div>
@@ -113,4 +163,3 @@ function FirstTimers() {
 }
 
 export default FirstTimers;
-
