@@ -260,8 +260,10 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         )
 
         if rejected_report:
-            for key, value in validated_data.items():
-                setattr(rejected_report, key, value)
+            rejected_report.service = validated_data.get("service")
+            rejected_report.new_members = validated_data["new_members"]
+            rejected_report.offering_amount = validated_data["offering_amount"]
+            rejected_report.summary = validated_data["summary"]
             rejected_report.submitted_by = request.user
             rejected_report.leader = cell.leader
             rejected_report.status = CellReport.Status.PENDING
@@ -271,7 +273,10 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             rejected_report.approved_at = None
             rejected_report.save(
                 update_fields=[
-                    *validated_data.keys(),
+                    "service",
+                    "new_members",
+                    "offering_amount",
+                    "summary",
                     "submitted_by",
                     "leader",
                     "status",
