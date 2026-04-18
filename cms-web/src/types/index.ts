@@ -7,7 +7,7 @@ export interface User {
   phone: string | null;
   bio?: string | null;
   profile_picture?: string | null;
-  role: "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";
+  role: "admin" | "pastor" | "staff" | "fellowship_leader" | "cell_leader" | "teacher" | "member";
   responsibilities?: string[];
   is_frozen?: boolean;
   is_active?: boolean;

@@ -17,7 +17,7 @@ class DashboardAnalyticsView(APIView):
 
     def _scope_members(self, user):
         qs = MemberProfile.objects.select_related("cell", "cell__fellowship")
-        if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
             return qs
         if user.role == User.Role.FELLOWSHIP_LEADER:
             return qs.filter(cell__fellowship__leader=user)
@@ -27,7 +27,7 @@ class DashboardAnalyticsView(APIView):
 
     def _scope_reports(self, user):
         qs = CellReport.objects.select_related("cell", "cell__fellowship")
-        if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
             return qs
         if user.role == User.Role.FELLOWSHIP_LEADER:
             return qs.filter(cell__fellowship__leader=user)

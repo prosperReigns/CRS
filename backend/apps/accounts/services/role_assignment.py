@@ -71,7 +71,7 @@ def _demote_if_unassigned(previous_leader):
 
 @transaction.atomic
 def assign_cell_leader(member_profile, cell, assigned_by):
-    if assigned_by.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR, User.Role.STAFF}:
+    if assigned_by.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
         raise PermissionDenied("You are not allowed to assign cell leaders.")
     if assigned_by.role == User.Role.STAFF and not has_staff_permission(assigned_by, "manage_cells"):
         raise PermissionDenied("Only staff with cell ministry responsibility can assign cell leaders.")
@@ -103,8 +103,8 @@ def assign_cell_leader(member_profile, cell, assigned_by):
 
 @transaction.atomic
 def assign_fellowship_leader(member_profile, fellowship, assigned_by):
-    if assigned_by.role not in {User.Role.PASTOR, User.Role.STAFF}:
-        raise PermissionDenied("Only pastor or staff can assign fellowship leaders.")
+    if assigned_by.role not in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
+        raise PermissionDenied("Only pastor, admin, or staff can assign fellowship leaders.")
     if assigned_by.role == User.Role.STAFF and not has_staff_permission(assigned_by, "manage_cells"):
         raise PermissionDenied("Only staff with cell ministry responsibility can assign fellowship leaders.")
 
@@ -128,9 +128,9 @@ def assign_fellowship_leader(member_profile, fellowship, assigned_by):
 
 
 def _validate_leader_creation_permissions(role, assigned_by):
-    if role == User.Role.FELLOWSHIP_LEADER and assigned_by.role not in {User.Role.PASTOR, User.Role.STAFF}:
-        raise PermissionDenied("Only pastor or staff can create fellowship leaders.")
-    if role == User.Role.CELL_LEADER and assigned_by.role not in {User.Role.PASTOR, User.Role.STAFF, User.Role.FELLOWSHIP_LEADER}:
+    if role == User.Role.FELLOWSHIP_LEADER and assigned_by.role not in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
+        raise PermissionDenied("Only pastor, admin, or staff can create fellowship leaders.")
+    if role == User.Role.CELL_LEADER and assigned_by.role not in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF, User.Role.FELLOWSHIP_LEADER}:
         raise PermissionDenied("You are not allowed to create cell leaders.")
     if assigned_by.role == User.Role.STAFF and not has_staff_permission(assigned_by, "manage_cells"):
         raise PermissionDenied("Only staff with cell ministry responsibility can create leader accounts.")

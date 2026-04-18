@@ -34,6 +34,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.prefetch_related("staff_responsibilities").all().order_by("username")
     settings_roles = {
         User.Role.PASTOR,
+        User.Role.ADMIN,
         User.Role.STAFF,
         User.Role.FELLOWSHIP_LEADER,
         User.Role.CELL_LEADER,
@@ -52,7 +53,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
             return User.objects.prefetch_related("staff_responsibilities").all().order_by("username")
         if user.role == User.Role.FELLOWSHIP_LEADER:
             return (
@@ -75,7 +76,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.request.user
         role = serializer.validated_data.get("role")
 
-        if user.role == User.Role.PASTOR:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
             serializer.save()
             return
         if user.role == User.Role.STAFF:
@@ -107,7 +108,7 @@ class UserViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can only assign fellowship leader or cell leader roles.")
         if target_user.role not in allowed_target_roles:
             raise PermissionDenied("You can only change roles for members and existing leaders.")
-        if acting_user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if acting_user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
             return
         if acting_user.role == User.Role.FELLOWSHIP_LEADER:
             if role != User.Role.CELL_LEADER:
@@ -124,7 +125,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 "Assign leader roles through /api/accounts/assign-fellowship-leader/ or /api/accounts/assign-cell-leader/."
             )
 
-        if acting_user.role in {User.Role.PASTOR, User.Role.STAFF}:
+        if acting_user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
             serializer.save()
             return
 
@@ -235,8 +236,8 @@ class StaffResponsibilityViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def _ensure_pastor(self):
-        if self.request.user.role != User.Role.PASTOR:
-            raise PermissionDenied("Only pastors can manage staff responsibilities.")
+        if self.request.user.role not in {User.Role.PASTOR, User.Role.ADMIN}:
+            raise PermissionDenied("Only pastors or admins can manage staff responsibilities.")
 
     def create(self, request, *args, **kwargs):
         self._ensure_pastor()

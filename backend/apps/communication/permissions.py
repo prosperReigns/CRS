@@ -25,11 +25,11 @@ class AnnouncementPermission(BasePermission):
             return False
         if request.method in SAFE_METHODS:
             return True
-        return request.user.role in {User.Role.PASTOR, User.Role.STAFF}
+        return request.user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}
 
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
-            if request.user.role in {User.Role.PASTOR, User.Role.STAFF}:
+            if request.user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
                 return True
             return obj.recipients.filter(pk=request.user.pk).exists() or obj.recipients.count() == 0
-        return request.user.role in {User.Role.PASTOR, User.Role.STAFF}
+        return request.user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}

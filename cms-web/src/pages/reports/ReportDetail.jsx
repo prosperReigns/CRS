@@ -16,9 +16,9 @@ function ReportDetail({ report, refresh }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmAction, setConfirmAction] = useState("");
-  const canComment = ["fellowship_leader", "pastor"].includes(user?.role);
+  const canComment = ["fellowship_leader", "admin", "pastor"].includes(user?.role);
   const canReview = user?.role === "fellowship_leader" && report.status === "pending";
-  const canApprove = user?.role === "pastor" && report.status === "reviewed";
+  const canApprove = ["admin", "pastor"].includes(user?.role) && report.status === "reviewed";
   
   const handleApprove = async () => {
     try {

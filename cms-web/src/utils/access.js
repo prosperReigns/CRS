@@ -8,9 +8,10 @@ export const hasAnyStaffResponsibility = (user) => {
   return Array.isArray(user.responsibilities) && user.responsibilities.length > 0;
 };
 
-export const canAccessCellMinistry = (user) => user?.role === "pastor" || hasResponsibility(user, "cell_ministry");
+const hasPastorPrivileges = (user) => ["admin", "pastor"].includes(user?.role);
 
-export const canAccessFirstTimers = (user) => user?.role === "pastor" || hasResponsibility(user, "first_timer");
+export const canAccessCellMinistry = (user) => hasPastorPrivileges(user) || hasResponsibility(user, "cell_ministry");
 
-export const canAccessPartnership = (user) => user?.role === "pastor" || hasResponsibility(user, "partnership");
+export const canAccessFirstTimers = (user) => hasPastorPrivileges(user) || hasResponsibility(user, "first_timer");
 
+export const canAccessPartnership = (user) => hasPastorPrivileges(user) || hasResponsibility(user, "partnership");

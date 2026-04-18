@@ -19,8 +19,9 @@ const meetingDays = [
 
 function Structure() {
   const { user } = useContext(AuthContext);
-  const canCreateFellowship = user?.role === "pastor" || canAccessCellMinistry(user);
-  const canCreateCell = user?.role === "pastor" || user?.role === "fellowship_leader" || canAccessCellMinistry(user);
+  const canCreateFellowship = ["admin", "pastor"].includes(user?.role) || canAccessCellMinistry(user);
+  const canCreateCell =
+    ["admin", "pastor"].includes(user?.role) || user?.role === "fellowship_leader" || canAccessCellMinistry(user);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");

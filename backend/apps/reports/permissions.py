@@ -27,25 +27,27 @@ class CellReportPermission(BasePermission):
             return (
                 role == User.Role.FELLOWSHIP_LEADER
                 or role == User.Role.PASTOR
+                or role == User.Role.ADMIN
                 or (role == User.Role.STAFF and has_staff_permission(request.user, "review_reports"))
             )
         if view.action in {"approve", "reject"}:
-            return role == User.Role.PASTOR
+            return role in {User.Role.PASTOR, User.Role.ADMIN}
         if view.action in {"comment"}:
-            return role in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR}
+            return role in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR, User.Role.ADMIN}
 
         if role == User.Role.STAFF:
             return has_staff_permission(request.user, "view_reports")
 
         return role in {
             User.Role.PASTOR,
+            User.Role.ADMIN,
             User.Role.CELL_LEADER,
         }
 
     def has_object_permission(self, request, view, obj):
         role = request.user.role
         if request.method in SAFE_METHODS:
-            if role == User.Role.PASTOR:
+            if role in {User.Role.PASTOR, User.Role.ADMIN}:
                 return True
             if role == User.Role.STAFF:
                 return has_staff_permission(request.user, "view_reports")
@@ -55,7 +57,7 @@ class CellReportPermission(BasePermission):
                 return self._is_cell_owner(request.user, obj)
             return False
 
-        if role == User.Role.PASTOR:
+        if role in {User.Role.PASTOR, User.Role.ADMIN}:
             return True
         if role == User.Role.STAFF:
             if view.action == "review":

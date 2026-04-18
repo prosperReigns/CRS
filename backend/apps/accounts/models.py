@@ -16,6 +16,7 @@ class StaffResponsibility(models.Model):
 
 class User(AbstractUser):
     class Role(models.TextChoices):
+        ADMIN = "admin", "Admin"
         PASTOR = "pastor", "Pastor"
         STAFF = "staff", "Church Staff"
         FELLOWSHIP_LEADER = "fellowship_leader", "Fellowship Leader"

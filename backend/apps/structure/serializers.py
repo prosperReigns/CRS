@@ -10,8 +10,8 @@ class FellowshipSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
     def validate_leader(self, value):
-        if value and value.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR, User.Role.STAFF}:
-            raise serializers.ValidationError("Fellowship leader must be a fellowship leader, staff, or pastor.")
+        if value and value.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
+            raise serializers.ValidationError("Fellowship leader must be a fellowship leader, staff, admin, or pastor.")
         return value
 
 

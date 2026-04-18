@@ -10,18 +10,22 @@ User = get_user_model()
 def get_allowed_recipients(user):
     base_qs = User.objects.exclude(pk=user.pk)
 
-    if user.role == User.Role.PASTOR:
-        return base_qs.filter(role__in=[User.Role.STAFF, User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER])
+    if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
+        return base_qs.filter(
+            role__in=[User.Role.ADMIN, User.Role.PASTOR, User.Role.STAFF, User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER]
+        )
     if user.role == User.Role.STAFF:
-        return base_qs.filter(role__in=[User.Role.PASTOR, User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER])
+        return base_qs.filter(
+            role__in=[User.Role.ADMIN, User.Role.PASTOR, User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER]
+        )
     if user.role == User.Role.FELLOWSHIP_LEADER:
         return base_qs.filter(
-            Q(role__in=[User.Role.PASTOR, User.Role.STAFF])
+            Q(role__in=[User.Role.ADMIN, User.Role.PASTOR, User.Role.STAFF])
             | Q(role=User.Role.CELL_LEADER, led_cells__fellowship__leader=user)
         ).distinct()
     if user.role == User.Role.CELL_LEADER:
         return base_qs.filter(
-            role__in=[User.Role.PASTOR, User.Role.STAFF, User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER]
+            role__in=[User.Role.ADMIN, User.Role.PASTOR, User.Role.STAFF, User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER]
         )
     return base_qs
 

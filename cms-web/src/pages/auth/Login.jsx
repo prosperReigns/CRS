@@ -14,6 +14,7 @@ function Login() {
   const redirectUser = (currentUser) => {
     if (currentUser?.is_frozen) return "/reports/submit";
     switch (currentUser?.role) {
+      case "admin":
       case "pastor":
         return "/dashboard";
       case "staff":

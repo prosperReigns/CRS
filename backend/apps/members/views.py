@@ -25,7 +25,7 @@ from .serializers import (
 def scoped_member_profiles(user):
     qs = MemberProfile.objects.select_related("user", "cell", "cell__fellowship")
 
-    if user.role in {User.Role.PASTOR, User.Role.STAFF}:
+    if user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
         return qs
     if user.role == User.Role.FELLOWSHIP_LEADER:
         return qs.filter(cell__fellowship__leader=user)
@@ -71,7 +71,7 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def _require_staff_permission(self, user, permission, message):
-        if user.role == User.Role.PASTOR:
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
             return
         if user.role != User.Role.STAFF or not has_staff_permission(user, permission):
             raise PermissionDenied(message)
@@ -81,7 +81,7 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
         self._require_staff_permission(
             request.user,
             "view_new_members",
-            "Only pastor or first timer coordinators can view first timers.",
+            "Only pastor, admin, or first timer coordinators can view first timers.",
         )
         qs = scoped_member_profiles(request.user).filter(is_first_timer=True)
         serializer = self.get_serializer(qs, many=True)
@@ -92,7 +92,7 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
         self._require_staff_permission(
             request.user,
             "update_visitation",
-            "Only pastor or first timer coordinators can update follow-up records.",
+            "Only pastor, admin, or first timer coordinators can update follow-up records.",
         )
         member_profile = self.get_object()
         if not member_profile.is_first_timer:
@@ -107,7 +107,7 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
         self._require_staff_permission(
             request.user,
             "view_partnership",
-            "Only pastor or partnership representatives can view partnership records.",
+            "Only pastor, admin, or partnership representatives can view partnership records.",
         )
         qs = scoped_member_profiles(request.user).filter(is_partner=True)
         serializer = self.get_serializer(qs, many=True)
@@ -118,7 +118,7 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
         self._require_staff_permission(
             request.user,
             "update_partnership",
-            "Only pastor or partnership representatives can update partnership records.",
+            "Only pastor, admin, or partnership representatives can update partnership records.",
         )
         member_profile = self.get_object()
         serializer = PartnershipUpdateSerializer(member_profile, data=request.data, partial=True)
@@ -166,7 +166,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def bulk_mark(self, request):
         user = request.user
-        if user.role not in {User.Role.PASTOR, User.Role.STAFF}:
+        if user.role not in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
             raise PermissionDenied("You are not allowed to mark bulk attendance.")
 
         serializer = BulkAttendanceSerializer(data=request.data)

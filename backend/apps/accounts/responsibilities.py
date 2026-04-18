@@ -36,7 +36,7 @@ def has_responsibility(user, code):
 def has_staff_permission(user, permission):
     if not getattr(user, "is_authenticated", False):
         return False
-    if user.role == User.Role.PASTOR:
+    if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
         return True
     if user.role != User.Role.STAFF:
         return False
