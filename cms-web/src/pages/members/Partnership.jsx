@@ -181,7 +181,13 @@ function Partnership() {
   const handleDownloadDocument = () => {
     if (!activeDocument) return;
 
-    const headers = Object.values(activeDocument.headers || defaultDocumentHeaders);
+    const headers = [
+      activeDocument.headers?.memberName || defaultDocumentHeaders.memberName,
+      activeDocument.headers?.cellName || defaultDocumentHeaders.cellName,
+      activeDocument.headers?.amount || defaultDocumentHeaders.amount,
+      activeDocument.headers?.category || defaultDocumentHeaders.category,
+      activeDocument.headers?.note || defaultDocumentHeaders.note,
+    ];
     const rows = activeDocument.rows.map((row) =>
       [row.memberName, row.cellName, row.amount, row.category, row.note].map(escapeCsvValue).join(",")
     );
