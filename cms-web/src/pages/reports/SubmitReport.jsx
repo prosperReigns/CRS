@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createReport } from "../../api/reports";
 import { getMembers } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
@@ -12,7 +12,6 @@ function SubmitReport() {
     meeting_time: "",
     meeting_duration_minutes: "",
     report_type: "",
-    new_members: "",
     offering_amount: "",
     summary: "",
   });
@@ -24,6 +23,7 @@ function SubmitReport() {
   const [customAttendees, setCustomAttendees] = useState([]);
   const [customFirstTimers, setCustomFirstTimers] = useState([]);
   const [images, setImages] = useState([]);
+  const customAttendeeCounter = useRef(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -100,7 +100,8 @@ function SubmitReport() {
   const addCustomAttendee = () => {
     const normalized = customAttendeeInput.trim();
     if (!normalized) return;
-    const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    customAttendeeCounter.current += 1;
+    const id = `custom-${customAttendeeCounter.current}`;
     setCustomAttendees((prev) => [...prev, { id, name: normalized }]);
     setAttendees((prev) => [...prev, id]);
     setCustomAttendeeInput("");
@@ -136,9 +137,9 @@ function SubmitReport() {
     if (form.meeting_duration_minutes) {
       formData.append("meeting_duration_minutes", form.meeting_duration_minutes);
     }
-    formData.append("report_type", form.report_type);
     const computedNewMembers = firstTimerAttendees.length + customFirstTimers.length;
-    formData.append("new_members", form.new_members || String(computedNewMembers));
+    formData.append("report_type", form.report_type);
+    formData.append("new_members", String(computedNewMembers));
     formData.append("offering_amount", form.offering_amount);
     formData.append("summary", form.summary);
     formData.append("attendee_names", selectedCustomNames.join(", "));
@@ -161,7 +162,6 @@ function SubmitReport() {
           meeting_time: "",
           meeting_duration_minutes: "",
           report_type: "",
-          new_members: "",
           offering_amount: "",
           summary: "",
       });
@@ -375,12 +375,9 @@ function SubmitReport() {
       )}
 
       <input
-        placeholder="New Members"
-        type="number"
-        min="0"
-        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-        value={form.new_members}
-        onChange={(e) => setForm({ ...form, new_members: e.target.value })}
+        value={`New members (first timers): ${firstTimerAttendees.length + customFirstTimers.length}`}
+        className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 text-slate-700"
+        disabled
       />
 
       <input
