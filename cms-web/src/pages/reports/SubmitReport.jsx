@@ -60,10 +60,16 @@ function SubmitReport() {
     return Array.from(uniqueCells.values());
   }, [members]);
 
+  const selectedCellId = Number(form.cell);
+  const membersForSelectedCell = useMemo(() => {
+    if (!selectedCellId) return [];
+    return members.filter((member) => member.cell === selectedCellId);
+  }, [members, selectedCellId]);
+
   const visibleMembers = useMemo(() => {
     const query = attendeeSearch.trim().toLowerCase();
-    if (!query) return members;
-    return members.filter((member) => {
+    if (!query) return membersForSelectedCell;
+    return membersForSelectedCell.filter((member) => {
       const fullNameLower = `${member.user?.first_name || ""} ${member.user?.last_name || ""}`
         .trim()
         .toLowerCase();
@@ -73,7 +79,16 @@ function SubmitReport() {
         member.cell_name?.toLowerCase().includes(query)
       );
     });
-  }, [members, attendeeSearch]);
+  }, [membersForSelectedCell, attendeeSearch]);
+
+  useEffect(() => {
+    if (!selectedCellId) return;
+    const validMemberIds = new Set(membersForSelectedCell.map((member) => member.id));
+    setAttendees((prev) =>
+      prev.filter((id) => (typeof id === "number" ? validMemberIds.has(id) : true))
+    );
+    setFirstTimerAttendees((prev) => prev.filter((id) => validMemberIds.has(id)));
+  }, [membersForSelectedCell, selectedCellId]);
 
   const toggleAttendee = (id) => {
     setAttendees((prev) => {
@@ -122,8 +137,8 @@ function SubmitReport() {
     const selectedMemberIds = attendees.filter((id) => typeof id === "number");
     const selectedCustomNames = customAttendees.filter((entry) => attendees.includes(entry.id)).map((entry) => entry.name);
 
-    if (selectedMemberIds.length + selectedCustomNames.length < 1) {
-      setError("Select at least one attendee.");
+    if (selectedMemberIds.length < 1) {
+      setError("Select at least one member from the selected cell.");
       return;
     }
     if (images.length < 1) {

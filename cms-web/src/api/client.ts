@@ -38,6 +38,24 @@ export const registerUnauthorizedHandler = (handler: UnauthorizedHandler) => {
 };
 
 export const getErrorMessage = (error: unknown, fallback: string): string => {
+  const extractMessage = (value: unknown): string | undefined => {
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const message = extractMessage(item);
+        if (message) return message;
+      }
+      return undefined;
+    }
+    if (value && typeof value === "object") {
+      for (const nestedValue of Object.values(value)) {
+        const message = extractMessage(nestedValue);
+        if (message) return message;
+      }
+    }
+    return undefined;
+  };
+
   const apiError = error as AxiosError<ApiErrorShape>;
   const responseData = apiError.response?.data;
   if (!responseData) return fallback;
@@ -49,8 +67,7 @@ export const getErrorMessage = (error: unknown, fallback: string): string => {
     return responseData.non_field_errors[0];
   }
 
-  const fieldError = Object.values(responseData).find((value) => typeof value === "string");
-  return (fieldError as string) || fallback;
+  return extractMessage(responseData) || fallback;
 };
 
 API.interceptors.request.use((config) => {
