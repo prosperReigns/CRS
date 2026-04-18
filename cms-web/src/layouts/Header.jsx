@@ -106,8 +106,8 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
 
   const handleOpenNotification = async (notification) => {
     if (!notification.is_read) {
-      const markedRead = await handleMarkRead(notification.id);
-      setSelectedNotification(markedRead ? { ...notification, is_read: true } : notification);
+      await handleMarkRead(notification.id);
+      setSelectedNotification(notification);
       return;
     }
     setSelectedNotification(notification);
@@ -240,6 +240,7 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
           <div
             className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4"
             onClick={() => setSelectedNotification(null)}
+            role="presentation"
           >
             <div
               role="dialog"
@@ -263,7 +264,6 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
                 <button
                   type="button"
                   onClick={() => setSelectedNotification(null)}
-                  aria-label="Close notification"
                   className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
                 >
                   Close
