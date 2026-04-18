@@ -90,6 +90,7 @@ function ReportDetail({ report, refresh }) {
           : "None"}
         </p>
         <p><strong>Offering:</strong> {report.offering_amount}</p>
+        <p><strong>Attendee Names:</strong> {report.attendee_names || "-"}</p>
         <p><strong>Summary:</strong> {report.summary}</p>
       </div>
 

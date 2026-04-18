@@ -1,5 +1,5 @@
 import API, { getErrorMessage } from "./client";
-import type { User } from "../types";
+import type { StaffResponsibility, User } from "../types";
 import { toList } from "./utils";
 
 export const getUsers = async (): Promise<User[]> => {
@@ -8,6 +8,38 @@ export const getUsers = async (): Promise<User[]> => {
     return toList(response.data);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to fetch users."));
+  }
+};
+
+export const getStaffResponsibilities = async (): Promise<StaffResponsibility[]> => {
+  try {
+    const response = await API.get<StaffResponsibility[] | { results: StaffResponsibility[] }>(
+      "accounts/staff-responsibilities/"
+    );
+    return toList(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch staff responsibilities."));
+  }
+};
+
+export interface CreateUserPayload {
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  role: User["role"];
+  password: string;
+  responsibilities?: string[];
+  is_active?: boolean;
+}
+
+export const createUser = async (payload: CreateUserPayload): Promise<User> => {
+  try {
+    const response = await API.post<User>("accounts/users/", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to create user."));
   }
 };
 

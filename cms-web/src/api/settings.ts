@@ -3,6 +3,8 @@ import type { User } from "../types";
 
 export interface UserSettings extends User {
   cell_meeting_venue?: string;
+  cell_name?: string;
+  fellowship_name?: string;
 }
 
 export interface UpdateSettingsPayload {
@@ -12,6 +14,8 @@ export interface UpdateSettingsPayload {
   phone?: string;
   bio?: string;
   cell_meeting_venue?: string;
+  cell_name?: string;
+  fellowship_name?: string;
   profile_picture?: File;
 }
 

@@ -11,6 +11,7 @@ function SubmitReport() {
     new_members: "",
     offering_amount: "",
     summary: "",
+    attendee_names: "",
   });
   const [members, setMembers] = useState([]);
   const [attendees, setAttendees] = useState([]);
@@ -87,6 +88,7 @@ function SubmitReport() {
     formData.append("new_members", form.new_members || "0");
     formData.append("offering_amount", form.offering_amount);
     formData.append("summary", form.summary);
+    formData.append("attendee_names", form.attendee_names);
     attendees.forEach((attendeeId) => {
       formData.append("attendees", String(attendeeId));
     });
@@ -103,6 +105,7 @@ function SubmitReport() {
         new_members: "",
         offering_amount: "",
         summary: "",
+        attendee_names: "",
       });
       setAttendees([]);
       setImages([]);
@@ -213,6 +216,13 @@ function SubmitReport() {
         value={form.offering_amount}
         onChange={(e) => setForm({ ...form, offering_amount: e.target.value })}
         required
+      />
+
+      <textarea
+        placeholder="Names of members that attended (comma-separated)"
+        className="min-h-20 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+        value={form.attendee_names}
+        onChange={(e) => setForm({ ...form, attendee_names: e.target.value })}
       />
 
       <textarea

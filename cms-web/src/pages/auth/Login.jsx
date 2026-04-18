@@ -22,7 +22,7 @@ function Login() {
       case "fellowship_leader":
         return "/settings";
       case "cell_leader":
-        return "/settings";
+        return "/reports/submit";
       case "teacher":
       case "member":
         return "/messages";
