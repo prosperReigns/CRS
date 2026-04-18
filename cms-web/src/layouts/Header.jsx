@@ -102,11 +102,13 @@ function Header({ isSidebarOpen, onSidebarToggle }) {
     }
   };
 
-  const handleOpenNotification = (notification) => {
-    setSelectedNotification(notification);
+  const handleOpenNotification = async (notification) => {
     if (!notification.is_read) {
-      handleMarkRead(notification.id);
+      await handleMarkRead(notification.id);
+      setSelectedNotification({ ...notification, is_read: true });
+      return;
     }
+    setSelectedNotification(notification);
   };
 
   const handleDialogKeyDown = (event) => {
