@@ -161,6 +161,17 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             )
         )
 
+    @staticmethod
+    def _is_duplicate_report_error(exc):
+        cause = getattr(exc, "__cause__", None)
+        if cause is not None:
+            diag = getattr(cause, "diag", None)
+            if getattr(diag, "constraint_name", None) == "uniq_report_per_cell_per_date":
+                return True
+
+        error_text = str(exc).lower()
+        return "uniq_report_per_cell_per_date" in error_text
+
     def validate(self, attrs):
         request = self.context["request"]
         user = request.user
@@ -189,6 +200,10 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"cell": "Cell leaders can only submit for their own cell."})
         if cell is None:
             raise serializers.ValidationError({"cell": "Cell is required."})
+        if cell.leader_id is None:
+            raise serializers.ValidationError(
+                {"cell": "This cell does not have an assigned leader. Please contact an administrator."}
+            )
 
         if attendees is None:
             if self.instance is None:
@@ -227,13 +242,16 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         images = validated_data.pop("images", [])
         attendees = validated_data.pop("attendees", [])
         request = self.context["request"]
+        cell = validated_data["cell"]
 
         try:
-            report = CellReport.objects.create(submitted_by=request.user, **validated_data)
+            report = CellReport.objects.create(submitted_by=request.user, leader=cell.leader, **validated_data)
         except IntegrityError as exc:
-            raise serializers.ValidationError(
-                {"non_field_errors": ["A report for this cell and meeting date already exists."]}
-            ) from exc
+            if self._is_duplicate_report_error(exc):
+                raise serializers.ValidationError(
+                    {"non_field_errors": ["A report for this cell and meeting date already exists."]}
+                ) from exc
+            raise
 
         if attendees:
             report.attendees.set(attendees)
@@ -251,15 +269,20 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         images = validated_data.pop("images", None)
         attendees = validated_data.pop("attendees", None)
 
+        if "cell" in validated_data:
+            validated_data["leader"] = validated_data["cell"].leader
+
         for key, value in validated_data.items():
             setattr(instance, key, value)
 
         try:
             instance.save()
         except IntegrityError as exc:
-            raise serializers.ValidationError(
-                {"non_field_errors": ["A report for this cell and meeting date already exists."]}
-            ) from exc
+            if self._is_duplicate_report_error(exc):
+                raise serializers.ValidationError(
+                    {"non_field_errors": ["A report for this cell and meeting date already exists."]}
+                ) from exc
+            raise
 
         if attendees is not None:
             instance.attendees.set(attendees)

@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { canAccessCellMinistry, canAccessFirstTimers, canAccessPartnership, hasAnyStaffResponsibility } from "../utils/access";
 
-function Sidebar() {
+function Sidebar({ isOpen, onToggle }) {
   const { user } = useContext(AuthContext);
 
   if (!user) return null;
@@ -26,7 +26,23 @@ function Sidebar() {
   const navClassName = ({ isActive }) => `${baseLinkClass} ${isActive ? activeLinkClass : ""}`;
 
   return (
-    <aside className="w-64 bg-slate-900 p-4 text-white">
+    <div className="shrink-0 bg-slate-900 text-white">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label="Toggle sidebar navigation"
+        aria-expanded={isOpen}
+        aria-controls="app-sidebar-navigation"
+        className="m-4 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+      >
+        {isOpen ? "Hide Sidebar" : "Show Sidebar"}
+      </button>
+
+      <aside
+        id="app-sidebar-navigation"
+        aria-hidden={!isOpen}
+        className={`w-64 p-4 pt-0 ${isOpen ? "block" : "hidden"}`}
+      >
       <h3 className="mb-5 text-lg font-bold tracking-wide">ChurchSys</h3>
 
       {canViewDashboard && !isFrozen && (
@@ -103,7 +119,8 @@ function Sidebar() {
           Settings
         </NavLink>
       )}
-    </aside>
+      </aside>
+    </div>
   );
 }
 
