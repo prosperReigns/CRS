@@ -30,6 +30,7 @@ function Sidebar({ isOpen, onToggle }) {
       <button
         type="button"
         onClick={onToggle}
+        aria-label="Toggle sidebar navigation"
         aria-expanded={isOpen}
         aria-controls="app-sidebar-navigation"
         className="m-4 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700"

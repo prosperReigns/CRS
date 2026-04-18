@@ -163,6 +163,12 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def _is_duplicate_report_error(exc):
+        cause = getattr(exc, "__cause__", None)
+        if cause is not None:
+            diag = getattr(cause, "diag", None)
+            if getattr(diag, "constraint_name", None) == "uniq_report_per_cell_per_date":
+                return True
+
         error_text = str(exc).lower()
         return "uniq_report_per_cell_per_date" in error_text or (
             "unique constraint failed: reports_cellreport.cell_id, reports_cellreport.meeting_date" in error_text
