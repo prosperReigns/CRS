@@ -4,6 +4,9 @@ import { getMembers } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
 import { inferReportTypeFromDate, REPORT_TYPE_OPTIONS } from "./reportType";
 
+const isMemberAttendeeId = (id) => typeof id === "number";
+const isCustomAttendeeId = (id) => typeof id === "string";
+
 function SubmitReport() {
   const { user } = useContext(AuthContext);
   const [form, setForm] = useState({
@@ -60,10 +63,16 @@ function SubmitReport() {
     return Array.from(uniqueCells.values());
   }, [members]);
 
+  const selectedCellId = form.cell ? Number(form.cell) : null;
+  const membersForSelectedCell = useMemo(() => {
+    if (!selectedCellId) return [];
+    return members.filter((member) => member.cell === selectedCellId);
+  }, [members, selectedCellId]);
+
   const visibleMembers = useMemo(() => {
     const query = attendeeSearch.trim().toLowerCase();
-    if (!query) return members;
-    return members.filter((member) => {
+    if (!query) return membersForSelectedCell;
+    return membersForSelectedCell.filter((member) => {
       const fullNameLower = `${member.user?.first_name || ""} ${member.user?.last_name || ""}`
         .trim()
         .toLowerCase();
@@ -73,7 +82,16 @@ function SubmitReport() {
         member.cell_name?.toLowerCase().includes(query)
       );
     });
-  }, [members, attendeeSearch]);
+  }, [membersForSelectedCell, attendeeSearch]);
+
+  useEffect(() => {
+    if (!selectedCellId) return;
+    const validMemberIds = new Set(membersForSelectedCell.map((member) => member.id));
+    setAttendees((prev) =>
+      prev.filter((id) => (isMemberAttendeeId(id) ? validMemberIds.has(id) : isCustomAttendeeId(id)))
+    );
+    setFirstTimerAttendees((prev) => prev.filter((id) => validMemberIds.has(id)));
+  }, [membersForSelectedCell, selectedCellId]);
 
   const toggleAttendee = (id) => {
     setAttendees((prev) => {
@@ -119,11 +137,11 @@ function SubmitReport() {
     setError("");
     setSuccess("");
 
-    const selectedMemberIds = attendees.filter((id) => typeof id === "number");
+    const selectedMemberIds = attendees.filter(isMemberAttendeeId);
     const selectedCustomNames = customAttendees.filter((entry) => attendees.includes(entry.id)).map((entry) => entry.name);
 
-    if (selectedMemberIds.length + selectedCustomNames.length < 1) {
-      setError("Select at least one attendee.");
+    if (selectedMemberIds.length < 1) {
+      setError("Select at least one member from the selected cell.");
       return;
     }
     if (images.length < 1) {
