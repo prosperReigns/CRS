@@ -4,6 +4,7 @@ import ReportDetail from "./ReportDetail";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
+import { getReportTypeLabel } from "./reportType";
 
 function ManageReports() {
   const [reports, setReports] = useState([]);
@@ -49,6 +50,7 @@ function ManageReports() {
               {r.cell_name || r.cell}
             </p>
             <p className="text-sm text-slate-600">{r.meeting_date}</p>
+            <p className="text-sm text-slate-600">{getReportTypeLabel(r.report_type)}</p>
             <p className="text-sm capitalize text-slate-600">Status: {r.status}</p>
           </div>
         ))}

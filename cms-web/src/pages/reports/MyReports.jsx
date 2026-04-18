@@ -4,6 +4,7 @@ import ReportDetail from "./ReportDetail";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
+import { getReportTypeLabel } from "./reportType";
 
 
 const getStatusColor = (status) => {
@@ -63,6 +64,7 @@ function MyReports() {
               {report.cell_name || report.cell}
             </p>
             <p className="text-sm text-slate-600">{report.meeting_date}</p>
+            <p className="text-sm text-slate-600">{getReportTypeLabel(report.report_type)}</p>
             <p className={`text-sm font-semibold capitalize ${getStatusColor(report.status)}`}>Status: {report.status}</p>
           </div>
         ))}

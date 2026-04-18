@@ -93,6 +93,7 @@ export interface Report {
   submitted_by: number;
   author: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
   meeting_date: string;
+  report_type: "week1_prayer_planning" | "week2_bible_study" | "week3_bible_study" | "week4_outreach";
   attendees: ReportAttendee[];
   attendance_count: number;
   attendee_names?: string;
