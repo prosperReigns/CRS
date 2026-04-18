@@ -9,13 +9,17 @@ import ManageReports from "./pages/reports/ManageReports";
 import MyReports from "./pages/reports/MyReports";
 import Members from "./pages/members/Members";
 import Attendance from "./pages/members/Attendance";
+import AssignCellLeader from "./pages/members/AssignCellLeader";
 import Messaging from "./pages/messaging/Messaging";
 import Structure from "./pages/structure/Structure";
+import AssignFellowshipLeader from "./pages/structure/AssignFellowshipLeader";
 import Settings from "./pages/settings/Settings";
 
 const memberManagerRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
 const messagingRoles = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
 const structureRoles = ["pastor", "staff", "fellowship_leader"];
+const fellowshipLeaderAssignmentRoles = ["pastor", "staff"];
+const cellLeaderAssignmentRoles = ["pastor", "staff", "fellowship_leader"];
 const settingsRoles = ["pastor", "staff", "fellowship_leader", "cell_leader"];
 
 function ProtectedLayoutRoute({ allowedRoles, children }) {
@@ -85,6 +89,24 @@ function App() {
           element={
             <ProtectedLayoutRoute allowedRoles={memberManagerRoles}>
               <Members />
+            </ProtectedLayoutRoute>
+          }
+        />
+
+        <Route
+          path="/members/assign-cell-leader"
+          element={
+            <ProtectedLayoutRoute allowedRoles={cellLeaderAssignmentRoles}>
+              <AssignCellLeader />
+            </ProtectedLayoutRoute>
+          }
+        />
+
+        <Route
+          path="/members/assign-fellowship-leader"
+          element={
+            <ProtectedLayoutRoute allowedRoles={fellowshipLeaderAssignmentRoles}>
+              <AssignFellowshipLeader />
             </ProtectedLayoutRoute>
           }
         />

@@ -1,15 +1,22 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from apps.members.models import MemberProfile
+from apps.structure.models import Cell, Fellowship
 from .models import User
 from .permissions import IsPastorOrStaff, IsSelfOrPastorOrStaff
+from .services import assign_cell_leader, assign_fellowship_leader, create_leader_account
 from .serializers import (
+    AssignCellLeaderSerializer,
+    AssignFellowshipLeaderSerializer,
     ChangePasswordSerializer,
+    CreateLeaderSerializer,
     LoginTokenSerializer,
     UserCreateSerializer,
     UserSerializer,
@@ -96,6 +103,11 @@ class UserViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         acting_user = self.request.user
         target_user = self.get_object()
+        requested_role = serializer.validated_data.get("role")
+        if requested_role in {User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER}:
+            raise PermissionDenied(
+                "Assign leader roles through /api/accounts/assign-fellowship-leader/ or /api/accounts/assign-cell-leader/."
+            )
 
         if acting_user.role in {User.Role.PASTOR, User.Role.STAFF}:
             serializer.save()
@@ -144,3 +156,57 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"detail": "Password updated successfully."})
+
+
+class AssignCellLeaderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = AssignCellLeaderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        member = MemberProfile.objects.select_related("user").filter(pk=serializer.validated_data["member_id"]).first()
+        if not member:
+            raise NotFound("Member profile not found.")
+
+        cell = Cell.objects.select_related("fellowship", "leader").filter(pk=serializer.validated_data["cell_id"]).first()
+        if not cell:
+            raise NotFound("Cell not found.")
+
+        data = assign_cell_leader(member_profile=member, cell=cell, assigned_by=request.user)
+        return Response(data)
+
+
+class AssignFellowshipLeaderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = AssignFellowshipLeaderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        member = MemberProfile.objects.select_related("user").filter(pk=serializer.validated_data["member_id"]).first()
+        if not member:
+            raise NotFound("Member profile not found.")
+
+        fellowship = Fellowship.objects.select_related("leader").filter(pk=serializer.validated_data["fellowship_id"]).first()
+        if not fellowship:
+            raise NotFound("Fellowship not found.")
+
+        data = assign_fellowship_leader(member_profile=member, fellowship=fellowship, assigned_by=request.user)
+        return Response(data)
+
+
+class CreateLeaderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = CreateLeaderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        payload = serializer.validated_data
+
+        data = create_leader_account(
+            data=payload,
+            role=payload["role"],
+            assigned_by=request.user,
+        )
+        return Response(data, status=201)

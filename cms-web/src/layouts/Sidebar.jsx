@@ -12,6 +12,8 @@ function Sidebar() {
   const canViewSettings = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageMembers = ["pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageStructure = ["pastor", "staff", "fellowship_leader"].includes(user.role);
+  const canAssignCellLeaders = ["pastor", "staff", "fellowship_leader"].includes(user.role);
+  const canAssignFellowshipLeaders = ["pastor", "staff"].includes(user.role);
   const canMessage = ["pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
     user.role
   );
@@ -60,6 +62,16 @@ function Sidebar() {
           <NavLink className={navClassName} to="/members">
             Members
           </NavLink>
+          {canAssignCellLeaders && (
+            <NavLink className={navClassName} to="/members/assign-cell-leader">
+              Assign Cell Leader
+            </NavLink>
+          )}
+          {canAssignFellowshipLeaders && (
+            <NavLink className={navClassName} to="/members/assign-fellowship-leader">
+              Assign Fellowship Leader
+            </NavLink>
+          )}
           <NavLink className={navClassName} to="/attendance">
             Attendance
           </NavLink>
