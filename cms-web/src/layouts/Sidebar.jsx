@@ -71,8 +71,14 @@ function Sidebar({ isOpen, onToggle }) {
       )}
 
       {canAccessFirstTimers(user) && !isFrozen && (
-        <NavLink className={navClassName} to="/first-timers">
-          First Timers
+        <NavLink className={navClassName} to="/visitation">
+          Visitation
+        </NavLink>
+      )}
+
+      {["fellowship_leader", "cell_leader"].includes(user.role) && !isFrozen && (
+        <NavLink className={navClassName} to="/visitation/reporting">
+          Visitation Reporting
         </NavLink>
       )}
 

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from rest_framework import serializers
 
-from .models import Attendance, ChurchService, MemberProfile, SoulWinning
+from .models import Attendance, ChurchService, MemberProfile, SoulWinning, VisitationReport
 
 User = get_user_model()
 
@@ -124,6 +124,47 @@ class PartnershipUpdateSerializer(serializers.ModelSerializer):
         model = MemberProfile
         fields = ["id", "is_partner", "partnership_date", "partnership_level", "updated_at"]
         read_only_fields = ["id", "updated_at"]
+
+
+class VisitationReportSerializer(serializers.ModelSerializer):
+    member_name = serializers.CharField(source="member.user.username", read_only=True)
+    leader_name = serializers.CharField(source="assigned_leader.username", read_only=True)
+
+    class Meta:
+        model = VisitationReport
+        fields = [
+            "id",
+            "member",
+            "member_name",
+            "assigned_leader",
+            "leader_name",
+            "visitation_date",
+            "visitation_time",
+            "method_used",
+            "comment",
+            "status",
+            "approved_by",
+            "approved_at",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "assigned_leader",
+            "member_name",
+            "leader_name",
+            "status",
+            "approved_by",
+            "approved_at",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate(self, attrs):
+        member = attrs.get("member") or getattr(self.instance, "member", None)
+        if member and not member.is_first_timer:
+            raise serializers.ValidationError({"member": "Selected member is not marked as a first timer."})
+        return attrs
 
 
 class AttendanceSerializer(serializers.ModelSerializer):

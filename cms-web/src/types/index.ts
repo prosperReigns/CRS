@@ -45,6 +45,23 @@ export interface Member {
   updated_at: string;
 }
 
+export interface VisitationReport {
+  id: number;
+  member: number;
+  member_name: string;
+  assigned_leader: number;
+  leader_name: string;
+  visitation_date: string;
+  visitation_time: string;
+  method_used: "calling" | "one_on_one_visitation";
+  comment: string;
+  status: "pending" | "approved";
+  approved_by: number | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Fellowship {
   id: number;
   name: string;

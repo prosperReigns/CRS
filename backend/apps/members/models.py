@@ -57,6 +57,49 @@ class MemberProfile(models.Model):
         return self.user.username
 
 
+class VisitationReport(models.Model):
+    class Method(models.TextChoices):
+        CALLING = "calling", "Calling"
+        ONE_ON_ONE = "one_on_one_visitation", "One on One Visitation"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+
+    member = models.ForeignKey(MemberProfile, on_delete=models.CASCADE, related_name="visitation_reports")
+    assigned_leader = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="submitted_visitation_reports",
+    )
+    visitation_date = models.DateField()
+    visitation_time = models.TimeField()
+    method_used = models.CharField(max_length=32, choices=Method.choices)
+    comment = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_visitation_reports",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-visitation_date", "-visitation_time", "-id"]
+        indexes = [
+            models.Index(fields=["assigned_leader", "status"]),
+            models.Index(fields=["member", "status"]),
+            models.Index(fields=["status", "visitation_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.member.user.username} - {self.assigned_leader_id} - {self.visitation_date}"
+
+
 class SoulWinning(models.Model):
     member = models.ForeignKey(MemberProfile, on_delete=models.CASCADE, related_name="evangelism_records")
     date = models.DateField()
