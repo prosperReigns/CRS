@@ -237,7 +237,7 @@ function Visitation() {
               ))}
             </select>
           </label>
-          <label className="md:col-span-2 text-sm text-slate-700">
+          <label className="text-sm text-slate-700 md:col-span-2">
             Notes
             <textarea
               rows={3}
