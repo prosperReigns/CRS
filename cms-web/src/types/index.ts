@@ -45,6 +45,17 @@ export interface Member {
   updated_at: string;
 }
 
+export interface Person {
+  id: number;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  created_at: string;
+  membership_status: "visitor" | "first_timer" | "regular" | "member";
+  is_member: boolean;
+}
+
 export interface VisitationReport {
   id: number;
   member: number;
@@ -135,15 +146,19 @@ export interface Report {
 
 export interface ReportAttendee {
   id: number;
-  user: Pick<User, "id" | "username" | "first_name" | "last_name" | "role">;
-  cell: number | null;
-  cell_name: string | null;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  membership_status?: "visitor" | "first_timer" | "regular" | "member";
 }
 
 export interface Attendance {
   id: number;
-  member: number;
-  member_name: string;
+  person: number | null;
+  person_name?: string | null;
+  member: number | null;
+  member_name: string | null;
   date: string;
   service: number | null;
   service_name?: string | null;
@@ -192,6 +207,7 @@ export interface NotificationItem {
 
 export interface AnalyticsResponse {
   members: { total: number; active: number; inactive: number };
+  membership?: { strength: number; visitors: number; first_timers: number; growth_rate?: number };
   report_stats: { total: number; approved: number; rejected: number };
   offering_total: number;
   souls_won: number;
@@ -205,13 +221,17 @@ export interface AnalyticsResponse {
     report_count: number;
     total_attendance: number;
     total_offering: number;
+    member_count?: number;
+    visitor_count?: number;
+    first_timer_count?: number;
   }>;
 }
 
 export interface AttendanceBulkRequest {
   date: string;
   service_id: number;
-  members: number[];
+  people?: number[];
+  members?: number[];
   present?: boolean;
 }
 

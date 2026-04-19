@@ -90,13 +90,17 @@ function ReportDetail({ report, refresh }) {
         <p>
         <strong>Attendees:</strong>{" "}
         {report.attendees?.length
-          ? report.attendees.map((attendee) => attendee.user?.username).join(", ")
+          ? report.attendees
+              .map((attendee) => `${attendee.first_name || ""} ${attendee.last_name || ""}`.trim())
+              .join(", ")
           : "None"}
         </p>
         <p>
           <strong>First Timers:</strong>{" "}
           {report.first_timer_attendees?.length
-            ? report.first_timer_attendees.map((attendee) => attendee.user?.username).join(", ")
+            ? report.first_timer_attendees
+                .map((attendee) => `${attendee.first_name || ""} ${attendee.last_name || ""}`.trim())
+                .join(", ")
             : "-"}
         </p>
         <p><strong>Offering:</strong> {report.offering_amount}</p>

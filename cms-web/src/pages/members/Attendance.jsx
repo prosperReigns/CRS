@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { getMembers, getServices, markAttendance } from "../../api/members";
+import { getPeople, getServices, markAttendance } from "../../api/members";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
 
 function Attendance() {
-  const [members, setMembers] = useState([]);
+  const [people, setPeople] = useState([]);
   const [selected, setSelected] = useState([]);
   const [date, setDate] = useState("");
   const [services, setServices] = useState([]);
@@ -20,8 +20,8 @@ function Attendance() {
 
   const fetchInitialData = async () => {
     try {
-      const [memberData, serviceData] = await Promise.all([getMembers(), getServices()]);
-      setMembers(memberData);
+      const [peopleData, serviceData] = await Promise.all([getPeople(), getServices()]);
+      setPeople(peopleData);
       setServices(serviceData);
       if (serviceData.length > 0) {
         setServiceId(String(serviceData[0].id));
@@ -57,7 +57,7 @@ function Attendance() {
       await markAttendance({
         date,
         service_id: Number(serviceId),
-        members: selected,
+        people: selected,
         present: true,
       });
       setSuccess("Attendance recorded successfully.");
@@ -96,18 +96,18 @@ function Attendance() {
         </select>
       </div>
 
-      {!loading && members.length === 0 && <EmptyState label="No members available for attendance." />}
+      {!loading && people.length === 0 && <EmptyState label="No people available for attendance." />}
       <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-2 xl:grid-cols-3">
-      {members.map((m) => (
-        <div key={m.id} className="rounded-md bg-white p-2">
+      {people.map((person) => (
+        <div key={person.id} className="rounded-md bg-white p-2">
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"
-              checked={selected.includes(m.id)}
-              onChange={() => toggleMember(m.id)}
+              checked={selected.includes(person.id)}
+              onChange={() => toggleMember(person.id)}
               className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
             />
-            {m.user?.username}
+            {`${person.first_name} ${person.last_name}`.trim()} ({person.membership_status})
           </label>
         </div>
       ))}
@@ -117,7 +117,7 @@ function Attendance() {
         type="button"
         className="w-full rounded-lg bg-brand-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
         onClick={handleSubmit}
-        disabled={loading || members.length === 0 || selected.length === 0 || !serviceId}
+        disabled={loading || people.length === 0 || selected.length === 0 || !serviceId}
       >
         Submit Attendance
       </button>

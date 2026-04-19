@@ -8,7 +8,43 @@ from apps.structure.models import Cell
 User = settings.AUTH_USER_MODEL
 
 
+class Person(models.Model):
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["first_name", "last_name", "id"]
+        indexes = [
+            models.Index(fields=["first_name", "last_name"]),
+            models.Index(fields=["phone"]),
+            models.Index(fields=["email"]),
+        ]
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
+    def __str__(self):
+        return self.full_name or f"Person {self.pk}"
+
+
 class MemberProfile(models.Model):
+    class MembershipStatus(models.TextChoices):
+        VISITOR = "visitor", "Visitor"
+        FIRST_TIMER = "first_timer", "First Timer"
+        REGULAR = "regular", "Regular Attender"
+        MEMBER = "member", "Member"
+
+    person = models.OneToOneField(
+        Person,
+        on_delete=models.CASCADE,
+        related_name="member_profile",
+        null=True,
+        blank=True,
+    )
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="member_profile")
     cell = models.ForeignKey(
         Cell,
@@ -19,6 +55,12 @@ class MemberProfile(models.Model):
     )
     is_baptised = models.BooleanField(default=False)
     foundation_completed = models.BooleanField(default=False)
+    membership_status = models.CharField(
+        max_length=20,
+        choices=MembershipStatus.choices,
+        default=MembershipStatus.VISITOR,
+        db_index=True,
+    )
     is_first_timer = models.BooleanField(default=False)
     first_visit_date = models.DateField(null=True, blank=True)
     follow_up_status = models.CharField(max_length=50, blank=True)
@@ -47,13 +89,16 @@ class MemberProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["user__username"]
+        ordering = ["person__first_name", "person__last_name", "user__username"]
         indexes = [
             models.Index(fields=["cell"]),
             models.Index(fields=["last_attended"]),
+            models.Index(fields=["membership_status"]),
         ]
 
     def __str__(self):
+        if self.person_id:
+            return self.person.full_name or f"Profile {self.pk}"
         return self.user.username
 
 
@@ -157,7 +202,20 @@ class Attendance(models.Model):
         MIDWEEK = "midweek", "Midweek Service"
         SPECIAL = "special", "Special Service"
 
-    member = models.ForeignKey(MemberProfile, on_delete=models.CASCADE, related_name="attendance_records")
+    person = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        related_name="service_attendance_records",
+        null=True,
+        blank=True,
+    )
+    member = models.ForeignKey(
+        MemberProfile,
+        on_delete=models.CASCADE,
+        related_name="attendance_records",
+        null=True,
+        blank=True,
+    )
     date = models.DateField()
     service = models.ForeignKey(ChurchService, on_delete=models.CASCADE, related_name="attendances", null=True, blank=True)
     service_type = models.CharField(max_length=20, choices=ServiceType.choices, default=ServiceType.SUNDAY)
@@ -173,7 +231,7 @@ class Attendance(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-date", "member__user__username"]
+        ordering = ["-date", "person__first_name", "person__last_name", "id"]
         constraints = [
             models.UniqueConstraint(
                 fields=["member", "date", "service_type"],
@@ -184,14 +242,46 @@ class Attendance(models.Model):
                 name="uniq_member_attendance_per_church_service",
                 condition=Q(service__isnull=False),
             ),
+            models.UniqueConstraint(
+                fields=["person", "date", "service_type"],
+                name="uniq_person_attendance_per_service",
+                condition=Q(person__isnull=False),
+            ),
+            models.UniqueConstraint(
+                fields=["person", "date", "service"],
+                name="uniq_person_attendance_per_church_service",
+                condition=Q(person__isnull=False) & Q(service__isnull=False),
+            ),
         ]
         indexes = [
             models.Index(fields=["date", "service_type"]),
             models.Index(fields=["date", "service"]),
             models.Index(fields=["member", "date"]),
+            models.Index(fields=["person", "date"]),
         ]
 
     def __str__(self):
         service = getattr(self, "service", None)
         service_label = service.name if service else self.service_type
-        return f"{self.member.user.username} - {self.date} ({service_label})"
+        person_label = self.person.full_name if self.person_id else (self.member.user.username if self.member_id else "Unknown")
+        return f"{person_label} - {self.date} ({service_label})"
+
+
+class CellMembership(models.Model):
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="cell_memberships")
+    cell = models.ForeignKey(Cell, on_delete=models.CASCADE, related_name="person_memberships")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["person", "cell"], name="uniq_person_cell_membership"),
+        ]
+        indexes = [
+            models.Index(fields=["cell", "is_active"]),
+            models.Index(fields=["person", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.person} @ {self.cell.name}"
