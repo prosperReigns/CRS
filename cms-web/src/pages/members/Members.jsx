@@ -38,6 +38,7 @@ const membershipBadgeClassMap = {
   visitor: "bg-slate-200 text-slate-700",
   regular: "bg-blue-100 text-blue-700",
 };
+const MEMBERSHIP_THRESHOLD = 4;
 
 function Members() {
   const [members, setMembers] = useState([]);
@@ -109,7 +110,7 @@ function Members() {
           <p className="text-sm text-slate-600">Status: {m.user?.is_frozen ? "Frozen" : m.user?.is_active ? "Active" : "Inactive"}</p>
           <p className="text-sm text-slate-600">Cell: {m.cell_name || "-"}</p>
           <p className="text-sm text-slate-600">
-            Attendance Progress: {Math.min(m.attendance_count ?? 0, 4)} / 4
+            Attendance Progress: {Math.min(m.attendance_count ?? 0, MEMBERSHIP_THRESHOLD)} / {MEMBERSHIP_THRESHOLD}
           </p>
           <p className="text-sm text-slate-600">Baptised: {m.is_baptised ? "Yes" : "No"}</p>
           <p className="text-sm text-slate-600">Foundation: {m.foundation_completed ? "Yes" : "No"}</p>

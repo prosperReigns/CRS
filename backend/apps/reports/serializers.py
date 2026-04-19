@@ -485,7 +485,6 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         attendees = validated_data.pop("attendees", None)
         first_timer_attendees = validated_data.pop("first_timer_attendees", None)
         new_attendees = validated_data.pop("new_attendees", [])
-        previous_attendee_ids = set(instance.attendees.values_list("id", flat=True))
 
         if "cell" in validated_data:
             validated_data["leader"] = validated_data["cell"].leader
@@ -503,6 +502,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             raise
 
         if attendees is not None:
+            previous_attendee_ids = set(instance.attendees.values_list("id", flat=True))
             attendees = list(attendees) + self._resolve_new_attendees(new_attendees)
             attendees = list({person.id: person for person in attendees}.values())
             instance.attendees.set(attendees)
@@ -516,11 +516,12 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         instance.sync_attendance_count(save=True)
         self._update_last_attended(meeting_date=instance.meeting_date, attendee_person_ids=attendee_person_ids)
         self._sync_cell_memberships(people=instance.attendees.all(), cell=instance.cell)
-        current_attendee_ids = set(attendee_person_ids)
-        self._apply_attendance_deltas(
-            added_ids=current_attendee_ids - previous_attendee_ids,
-            removed_ids=previous_attendee_ids - current_attendee_ids,
-        )
+        if attendees is not None:
+            current_attendee_ids = set(attendee_person_ids)
+            self._apply_attendance_deltas(
+                added_ids=current_attendee_ids - previous_attendee_ids,
+                removed_ids=previous_attendee_ids - current_attendee_ids,
+            )
 
         if images:
             ReportImage.objects.bulk_create([ReportImage(report=instance, image=img) for img in images])
