@@ -10,64 +10,17 @@ from apps.reports.models import CellReport
 from ..models import Attendance, MemberProfile, Person
 
 User = get_user_model()
-User = get_user_model()
 ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP = 4
 MAX_USERNAME_LENGTH = 150
 USERNAME_SEED_LIMIT = 24
 LEADERSHIP_ROLES = {User.Role.CELL_LEADER, User.Role.FELLOWSHIP_LEADER}
-MAX_USERNAME_LENGTH = 150
-USERNAME_SEED_LIMIT = 24
-LEADERSHIP_ROLES = {User.Role.CELL_LEADER, User.Role.FELLOWSHIP_LEADER}
+
 MEMBERSHIP_PRIORITY = {
     MemberProfile.MembershipStatus.VISITOR: 0,
     MemberProfile.MembershipStatus.FIRST_TIMER: 1,
     MemberProfile.MembershipStatus.REGULAR: 2,
     MemberProfile.MembershipStatus.MEMBER: 3,
 }
-
-
-def _normalize_username_seed(person):
-    seed = slugify(person.full_name).replace("-", "_")
-    if seed:
-        return seed
-    return f"member_{person.id or get_random_string(8).lower()}"
-
-
-def _unique_username(seed):
-    base = seed[:USERNAME_SEED_LIMIT] or "member"
-    candidate = base
-    index = 0
-    while User.objects.filter(username=candidate).exists():
-        index += 1
-        if index > 1000:
-            random_tail = get_random_string(8).lower()
-            prefix = base[: max(0, MAX_USERNAME_LENGTH - len(random_tail) - 1)]
-            candidate = f"{prefix}_{random_tail}" if prefix else random_tail[:MAX_USERNAME_LENGTH]
-            if not User.objects.filter(username=candidate).exists():
-                return candidate
-        suffix = f"_{index}"
-        prefix_length = max(0, MAX_USERNAME_LENGTH - len(suffix))
-        candidate = f"{base[:prefix_length]}{suffix}" if prefix_length else f"m{suffix}"[-MAX_USERNAME_LENGTH:]
-    return candidate
-
-
-def _create_member_profile_for_person(person, attendance_count):
-    username = _unique_username(_normalize_username_seed(person))
-    user = User.objects.create_user(
-        username=username,
-        first_name=person.first_name,
-        last_name=person.last_name,
-        email=person.email,
-        role=User.Role.MEMBER,
-    )
-    active_membership = person.cell_memberships.filter(is_active=True).select_related("cell").first()
-    return MemberProfile.objects.create(
-        person=person,
-        user=user,
-        cell=getattr(active_membership, "cell", None),
-        membership_status=MemberProfile.MembershipStatus.MEMBER,
-        attendance_count=max(0, attendance_count),
-    )
 
 
 def _normalize_username_seed(person):
@@ -141,13 +94,6 @@ def evaluate_membership(person, *, attendance_delta=0, recalculate_attendance=Fa
             updates.append("is_first_timer")
         if updates:
             profile.save(update_fields=[*updates, "updated_at"])
-        return profile
-
-    # Member-status profiles are considered stable and do not receive attendance-progress updates.
-    if profile.membership_status == MemberProfile.MembershipStatus.MEMBER:
-        if profile.is_first_timer:
-            profile.is_first_timer = False
-            profile.save(update_fields=["is_first_timer", "updated_at"])
         return profile
 
     if recalculate_attendance:
