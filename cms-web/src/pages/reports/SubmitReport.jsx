@@ -66,8 +66,16 @@ function SubmitReport() {
   }, [members]);
 
   const filteredPeople = useMemo(() => {
+    const selectedCellId = form.cell ? Number(form.cell) : null;
+    const selectedCellMemberIds = new Set(
+      members
+        .filter((member) => selectedCellId && member.cell === selectedCellId && member.person?.id)
+        .map((member) => member.person.id)
+    );
+    const allMemberPersonIds = new Set(members.filter((member) => member.person?.id).map((member) => member.person.id));
     const query = attendeeSearch.trim().toLowerCase();
     return people.filter((person) => {
+      if (selectedCellId && allMemberPersonIds.has(person.id) && !selectedCellMemberIds.has(person.id)) return false;
       if (membershipFilter !== "all" && person.membership_status !== membershipFilter) return false;
       if (!query) return true;
       const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim().toLowerCase();
@@ -77,7 +85,7 @@ function SubmitReport() {
         (person.email || "").toLowerCase().includes(query)
       );
     });
-  }, [people, attendeeSearch, membershipFilter]);
+  }, [people, attendeeSearch, membershipFilter, form.cell, members]);
 
   const toggleAttendee = (id) => {
     setAttendees((prev) => {
@@ -311,6 +319,7 @@ function SubmitReport() {
               />
               <span className="truncate">
                 {`${person.first_name} ${person.last_name}`.trim()} - {statusLabel[person.membership_status] || "Visitor"}
+                {person.cell_name ? ` (${person.cell_name})` : ""}
               </span>
             </label>
             <label className="flex items-center gap-1 text-xs text-slate-600">

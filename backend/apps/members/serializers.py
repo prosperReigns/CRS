@@ -44,6 +44,7 @@ class MemberProfileSerializer(serializers.ModelSerializer):
             "cell",
             "cell_name",
             "membership_status",
+            "attendance_count",
             "is_baptised",
             "foundation_completed",
             "is_first_timer",
@@ -61,7 +62,7 @@ class MemberProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "cell_name", "user", "person"]
+        read_only_fields = ["id", "created_at", "updated_at", "cell_name", "user", "person", "attendance_count"]
 
     def get_person(self, obj):
         person = obj.person
@@ -84,6 +85,14 @@ class MemberProfileSerializer(serializers.ModelSerializer):
         if value and value.role != User.Role.CELL_LEADER:
             raise serializers.ValidationError("Visitation cell leader must have the cell_leader role.")
         return value
+
+    def update(self, instance, validated_data):
+        track_fields = {"is_baptised", "foundation_completed"}
+        should_evaluate = bool(track_fields.intersection(validated_data.keys()))
+        profile = super().update(instance, validated_data)
+        if should_evaluate and profile.person_id:
+            evaluate_membership(profile.person)
+        return profile
 
 
 class SoulWinningSerializer(serializers.ModelSerializer):
@@ -286,14 +295,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         record = super().create(validated_data)
         if record.person_id and record.present:
-            profile = MemberProfile.objects.filter(person=record.person).first()
-            if profile and profile.membership_status == MemberProfile.MembershipStatus.VISITOR:
-                profile.membership_status = MemberProfile.MembershipStatus.FIRST_TIMER
-                profile.is_first_timer = True
-                if not profile.first_visit_date:
-                    profile.first_visit_date = record.date
-                profile.save(update_fields=["membership_status", "is_first_timer", "first_visit_date", "updated_at"])
-            evaluate_membership(record.person)
+            evaluate_membership(record.person, attendance_delta=1)
         return record
 
 
@@ -338,7 +340,9 @@ class BulkAttendanceSerializer(serializers.Serializer):
 
 class PersonSerializer(serializers.ModelSerializer):
     membership_status = serializers.SerializerMethodField(read_only=True)
+    attendance_count = serializers.SerializerMethodField(read_only=True)
     is_member = serializers.SerializerMethodField(read_only=True)
+    cell_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Person
@@ -350,9 +354,11 @@ class PersonSerializer(serializers.ModelSerializer):
             "email",
             "created_at",
             "membership_status",
+            "attendance_count",
             "is_member",
+            "cell_name",
         ]
-        read_only_fields = ["id", "created_at", "membership_status", "is_member"]
+        read_only_fields = ["id", "created_at", "membership_status", "attendance_count", "is_member", "cell_name"]
 
     def get_membership_status(self, obj):
         profile = getattr(obj, "member_profile", None)
@@ -360,5 +366,17 @@ class PersonSerializer(serializers.ModelSerializer):
             return MemberProfile.MembershipStatus.VISITOR
         return profile.membership_status
 
+    def get_attendance_count(self, obj):
+        profile = getattr(obj, "member_profile", None)
+        if not profile:
+            return 0
+        return profile.attendance_count
+
     def get_is_member(self, obj):
         return self.get_membership_status(obj) == MemberProfile.MembershipStatus.MEMBER
+
+    def get_cell_name(self, obj):
+        profile = getattr(obj, "member_profile", None)
+        if not profile or not profile.cell_id:
+            return None
+        return profile.cell.name

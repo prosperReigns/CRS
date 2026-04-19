@@ -61,6 +61,7 @@ class MemberProfile(models.Model):
         default=MembershipStatus.VISITOR,
         db_index=True,
     )
+    attendance_count = models.IntegerField(default=0)
     is_first_timer = models.BooleanField(default=False)
     first_visit_date = models.DateField(null=True, blank=True)
     follow_up_status = models.CharField(max_length=50, blank=True)

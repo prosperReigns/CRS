@@ -27,6 +27,8 @@ export interface Member {
   user: User;
   cell: number | null;
   cell_name: string | null;
+   membership_status: "visitor" | "first_timer" | "regular" | "member";
+   attendance_count: number;
   is_baptised: boolean;
   foundation_completed: boolean;
   is_first_timer: boolean;
@@ -53,7 +55,9 @@ export interface Person {
   email: string;
   created_at: string;
   membership_status: "visitor" | "first_timer" | "regular" | "member";
+  attendance_count: number;
   is_member: boolean;
+  cell_name?: string | null;
 }
 
 export interface VisitationReport {
@@ -151,6 +155,7 @@ export interface ReportAttendee {
   phone: string;
   email: string;
   membership_status?: "visitor" | "first_timer" | "regular" | "member";
+  cell_name?: string | null;
 }
 
 export interface Attendance {

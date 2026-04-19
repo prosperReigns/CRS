@@ -5,13 +5,14 @@ import ErrorState from "../../components/ui/ErrorState";
 
 const partnershipLevels = ["bronze", "silver", "gold", "platinum"];
 const financialStorageKey = "crs.partnership.financial-documents.v1";
-const defaultDocumentHeaders = {
-  memberName: "Member",
-  cellName: "Cell",
-  amount: "Amount",
-  category: "Category",
-  note: "Note",
-};
+const defaultDocumentColumns = [
+  { id: "memberName", label: "Member" },
+  { id: "cellName", label: "Cell" },
+  { id: "amount", label: "Amount" },
+  { id: "category", label: "Category" },
+  { id: "note", label: "Note" },
+];
+const legacyColumnKeys = defaultDocumentColumns.map((column) => column.id);
 
 const createRowId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -19,6 +20,43 @@ const createRowId = () => {
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
+
+const createColumn = (label = "") => ({
+  id: createRowId(),
+  label: String(label || "").trim() || "Column",
+});
+
+const getDocumentColumns = (doc) => {
+  const explicitColumns = Array.isArray(doc?.columns)
+    ? doc.columns
+        .map((column) => {
+          if (!column || typeof column !== "object") return null;
+          const id = String(column.id || "").trim() || createRowId();
+          const label = String(column.label || "").trim() || "Column";
+          return { id, label };
+        })
+        .filter(Boolean)
+    : [];
+
+  if (explicitColumns.length > 0) return explicitColumns;
+
+  const legacyHeaders = doc?.headers && typeof doc.headers === "object" ? doc.headers : null;
+  if (legacyHeaders) {
+    const legacyColumns = legacyColumnKeys.map((key) => ({
+      id: key,
+      label: String(legacyHeaders[key] || "").trim() || defaultDocumentColumns.find((column) => column.id === key)?.label,
+    }));
+    return legacyColumns;
+  }
+
+  return defaultDocumentColumns.map((column) => ({ ...column }));
+};
+
+const createRowValuesFromColumns = (columns) =>
+  columns.reduce((acc, column) => {
+    acc[column.id] = "";
+    return acc;
+  }, {});
 
 const escapeCsvValue = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
@@ -34,51 +72,61 @@ const normalizeDocuments = (value) => {
   return value
     .map((doc) => {
       if (!doc || typeof doc !== "object") return null;
-      const headers = Object.keys(defaultDocumentHeaders).reduce((acc, key) => {
-        const nextValue = String(doc.headers?.[key] || "").trim();
-        acc[key] = nextValue || defaultDocumentHeaders[key];
-        return acc;
-      }, {});
+      const columns = getDocumentColumns(doc);
       const rows = Array.isArray(doc.rows)
-        ? doc.rows.map((row) => ({
-            id: typeof row?.id === "string" ? row.id : createRowId(),
-            memberProfileId: row?.memberProfileId ?? null,
-            memberName: String(row?.memberName || ""),
-            cellName: String(row?.cellName || ""),
-            amount: String(row?.amount || ""),
-            category: String(row?.category || ""),
-            note: String(row?.note || ""),
-          }))
+        ? doc.rows.map((row) => {
+            const valuesFromRecord =
+              row?.values && typeof row.values === "object"
+                ? row.values
+                : columns.reduce((acc, column) => {
+                    acc[column.id] = String(row?.[column.id] || "");
+                    return acc;
+                  }, {});
+
+            return {
+              id: typeof row?.id === "string" ? row.id : createRowId(),
+              memberProfileId: row?.memberProfileId ?? null,
+              values: columns.reduce((acc, column) => {
+                acc[column.id] = String(valuesFromRecord?.[column.id] || "");
+                return acc;
+              }, {}),
+            };
+          })
         : [];
 
       return {
         id: typeof doc.id === "string" ? doc.id : createRowId(),
         name: String(doc.name || "Financial Document"),
         createdAt: typeof doc.createdAt === "string" ? doc.createdAt : new Date().toISOString(),
-        headers,
+        columns,
         rows,
       };
     })
     .filter(Boolean);
 };
 
-const createRowFromPartner = (partner) => ({
-  id: createRowId(),
-  memberProfileId: partner?.id ?? null,
-  memberName:
-    [partner?.user?.first_name, partner?.user?.last_name].filter(Boolean).join(" ") || partner?.user?.username || "",
-  cellName: partner?.cell_name || "",
-  amount: "",
-  category: "",
-  note: "",
-});
+const createRowFromPartner = (partner, columns) => {
+  const rowValues = createRowValuesFromColumns(columns);
+  if (rowValues.memberName !== undefined) {
+    rowValues.memberName =
+      [partner?.user?.first_name, partner?.user?.last_name].filter(Boolean).join(" ") || partner?.user?.username || "";
+  }
+  if (rowValues.cellName !== undefined) {
+    rowValues.cellName = partner?.cell_name || "";
+  }
+  return {
+    id: createRowId(),
+    memberProfileId: partner?.id ?? null,
+    values: rowValues,
+  };
+};
 
 const createDocument = (name, partners) => ({
   id: createRowId(),
   name,
   createdAt: new Date().toISOString(),
-  headers: { ...defaultDocumentHeaders },
-  rows: partners.map(createRowFromPartner),
+  columns: defaultDocumentColumns.map((column) => ({ ...column })),
+  rows: partners.map((partner) => createRowFromPartner(partner, defaultDocumentColumns)),
 });
 
 const readStoredDocuments = () => {
@@ -181,15 +229,9 @@ function Partnership() {
   const handleDownloadDocument = () => {
     if (!activeDocument) return;
 
-    const headers = [
-      activeDocument.headers?.memberName || defaultDocumentHeaders.memberName,
-      activeDocument.headers?.cellName || defaultDocumentHeaders.cellName,
-      activeDocument.headers?.amount || defaultDocumentHeaders.amount,
-      activeDocument.headers?.category || defaultDocumentHeaders.category,
-      activeDocument.headers?.note || defaultDocumentHeaders.note,
-    ];
+    const headers = activeDocument.columns.map((column) => escapeCsvValue(column.label));
     const rows = activeDocument.rows.map((row) =>
-      [row.memberName, row.cellName, row.amount, row.category, row.note].map(escapeCsvValue).join(",")
+      activeDocument.columns.map((column) => escapeCsvValue(row.values?.[column.id] || "")).join(",")
     );
     const csv = [headers.join(","), ...rows].join("\n");
 
@@ -204,14 +246,16 @@ function Partnership() {
     URL.revokeObjectURL(url);
   };
 
-  const updateDocumentCell = (rowId, field, value) => {
+  const updateDocumentCell = (rowId, columnId, value) => {
     if (!activeDocument) return;
     setFinancialDocuments((prev) =>
       prev.map((doc) =>
         doc.id === activeDocument.id
           ? {
               ...doc,
-              rows: doc.rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
+              rows: doc.rows.map((row) =>
+                row.id === rowId ? { ...row, values: { ...(row.values || {}), [columnId]: value } } : row
+              ),
             }
           : doc
       )
@@ -230,11 +274,7 @@ function Partnership() {
                 {
                   id: createRowId(),
                   memberProfileId: null,
-                  memberName: "",
-                  cellName: "",
-                  amount: "",
-                  category: "",
-                  note: "",
+                  values: createRowValuesFromColumns(activeDocument.columns),
                 },
               ],
             }
@@ -257,20 +297,54 @@ function Partnership() {
     );
   };
 
-  const updateDocumentHeader = (field, value) => {
+  const updateDocumentHeader = (columnId, value) => {
     if (!activeDocument) return;
     setFinancialDocuments((prev) =>
       prev.map((doc) =>
         doc.id === activeDocument.id
           ? {
               ...doc,
-              headers: {
-                ...(doc.headers || defaultDocumentHeaders),
-                [field]: value,
-              },
+              columns: doc.columns.map((column) => (column.id === columnId ? { ...column, label: value } : column)),
             }
           : doc
       )
+    );
+  };
+
+  const addDocumentColumn = () => {
+    if (!activeDocument) return;
+    const nextColumn = createColumn(`Column ${(activeDocument.columns?.length || 0) + 1}`);
+    setFinancialDocuments((prev) =>
+      prev.map((doc) =>
+        doc.id === activeDocument.id
+          ? {
+              ...doc,
+              columns: [...doc.columns, nextColumn],
+              rows: doc.rows.map((row) => ({
+                ...row,
+                values: { ...(row.values || {}), [nextColumn.id]: "" },
+              })),
+            }
+          : doc
+      )
+    );
+  };
+
+  const deleteDocumentColumn = (columnId) => {
+    if (!activeDocument || activeDocument.columns.length <= 1) return;
+    setFinancialDocuments((prev) =>
+      prev.map((doc) => {
+        if (doc.id !== activeDocument.id) return doc;
+        return {
+          ...doc,
+          columns: doc.columns.filter((column) => column.id !== columnId),
+          rows: doc.rows.map((row) => {
+            const nextValues = { ...(row.values || {}) };
+            delete nextValues[columnId];
+            return { ...row, values: nextValues };
+          }),
+        };
+      })
     );
   };
 
@@ -423,118 +497,73 @@ function Partnership() {
                     className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-lg font-semibold text-slate-900"
                     placeholder="Document title"
                   />
-                  <button
-                    type="button"
-                    onClick={addDocumentRow}
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Add Row
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={addDocumentColumn}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Add Column
+                    </button>
+                    <button
+                      type="button"
+                      onClick={addDocumentRow}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Add Row
+                    </button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="bg-slate-50 text-slate-600">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium">
-                          <input
-                            type="text"
-                            value={activeDocument.headers?.memberName || defaultDocumentHeaders.memberName}
-                            onChange={(event) => updateDocumentHeader("memberName", event.target.value)}
-                            aria-label="Edit member column header"
-                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
-                          />
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          <input
-                            type="text"
-                            value={activeDocument.headers?.cellName || defaultDocumentHeaders.cellName}
-                            onChange={(event) => updateDocumentHeader("cellName", event.target.value)}
-                            aria-label="Edit cell column header"
-                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
-                          />
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          <input
-                            type="text"
-                            value={activeDocument.headers?.amount || defaultDocumentHeaders.amount}
-                            onChange={(event) => updateDocumentHeader("amount", event.target.value)}
-                            aria-label="Edit amount column header"
-                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
-                          />
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          <input
-                            type="text"
-                            value={activeDocument.headers?.category || defaultDocumentHeaders.category}
-                            onChange={(event) => updateDocumentHeader("category", event.target.value)}
-                            aria-label="Edit category column header"
-                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
-                          />
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          <input
-                            type="text"
-                            value={activeDocument.headers?.note || defaultDocumentHeaders.note}
-                            onChange={(event) => updateDocumentHeader("note", event.target.value)}
-                            aria-label="Edit note column header"
-                            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
-                          />
-                        </th>
+                        {activeDocument.columns.map((column) => (
+                          <th key={column.id} className="px-3 py-2 text-left font-medium">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={column.label}
+                                onChange={(event) => updateDocumentHeader(column.id, event.target.value)}
+                                aria-label={`Edit ${column.label || "column"} header`}
+                                className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => deleteDocumentColumn(column.id)}
+                                disabled={activeDocument.columns.length <= 1}
+                                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                                aria-label={`Delete ${column.label || "column"} header`}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </th>
+                        ))}
                         <th className="px-3 py-2 text-left font-medium">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">
                       {activeDocument.rows.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-3 py-4 text-center text-slate-500">
+                          <td colSpan={activeDocument.columns.length + 1} className="px-3 py-4 text-center text-slate-500">
                             No rows yet.
                           </td>
                         </tr>
                       ) : (
                         activeDocument.rows.map((row) => (
                           <tr key={row.id}>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={row.memberName}
-                                onChange={(event) => updateDocumentCell(row.id, "memberName", event.target.value)}
-                                className="w-full rounded border border-slate-300 px-2 py-1"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={row.cellName}
-                                onChange={(event) => updateDocumentCell(row.id, "cellName", event.target.value)}
-                                className="w-full rounded border border-slate-300 px-2 py-1"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={row.amount}
-                                onChange={(event) => updateDocumentCell(row.id, "amount", event.target.value)}
-                                className="w-full rounded border border-slate-300 px-2 py-1"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={row.category}
-                                onChange={(event) => updateDocumentCell(row.id, "category", event.target.value)}
-                                className="w-full rounded border border-slate-300 px-2 py-1"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={row.note}
-                                onChange={(event) => updateDocumentCell(row.id, "note", event.target.value)}
-                                className="w-full rounded border border-slate-300 px-2 py-1"
-                              />
-                            </td>
+                            {activeDocument.columns.map((column) => (
+                              <td key={`${row.id}-${column.id}`} className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={row.values?.[column.id] || ""}
+                                  onChange={(event) => updateDocumentCell(row.id, column.id, event.target.value)}
+                                  className="w-full rounded border border-slate-300 px-2 py-1"
+                                />
+                              </td>
+                            ))}
                             <td className="px-3 py-2">
                               <button
                                 type="button"
