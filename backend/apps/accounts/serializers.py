@@ -17,6 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "gender",
             "email",
             "phone",
             "home_address",
@@ -53,6 +54,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "gender",
             "email",
             "phone",
             "role",
@@ -132,6 +134,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "gender",
             "email",
             "phone",
             "home_address",
@@ -302,6 +305,7 @@ class CreateLeaderSerializer(serializers.Serializer):
     username = serializers.CharField(required=False, allow_blank=True, max_length=150)
     first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
     last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    gender = serializers.ChoiceField(choices=User.Gender.choices, required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     password = serializers.CharField(required=False, allow_blank=True, write_only=True, min_length=8)
     fellowship_id = serializers.IntegerField(required=False, min_value=1)

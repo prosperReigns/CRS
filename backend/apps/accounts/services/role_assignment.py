@@ -67,6 +67,18 @@ def _ensure_person_for_member(member_profile):
     return person
 
 
+def _ensure_leader_not_member(member_profile):
+    update_fields = []
+    if member_profile.membership_status == MemberProfile.MembershipStatus.MEMBER:
+        member_profile.membership_status = MemberProfile.MembershipStatus.VISITOR
+        update_fields.append("membership_status")
+    if member_profile.membership_status != MemberProfile.MembershipStatus.FIRST_TIMER and member_profile.is_first_timer:
+        member_profile.is_first_timer = False
+        update_fields.append("is_first_timer")
+    if update_fields:
+        member_profile.save(update_fields=[*update_fields, "updated_at"])
+
+
 def _demote_if_unassigned(previous_leader):
     if not previous_leader:
         return
@@ -95,6 +107,7 @@ def assign_cell_leader(member_profile, cell, assigned_by):
 
     user, temporary_password = _ensure_user_for_member(member_profile)
     _ensure_person_for_member(member_profile)
+    _ensure_leader_not_member(member_profile)
     previous_leader = cell.leader if cell.leader_id and cell.leader_id != user.id else None
 
     if user.role != User.Role.CELL_LEADER:
@@ -126,6 +139,7 @@ def assign_fellowship_leader(member_profile, fellowship, assigned_by):
 
     user, temporary_password = _ensure_user_for_member(member_profile)
     _ensure_person_for_member(member_profile)
+    _ensure_leader_not_member(member_profile)
     previous_leader = fellowship.leader if fellowship.leader_id and fellowship.leader_id != user.id else None
 
     if user.role != User.Role.FELLOWSHIP_LEADER:
@@ -183,12 +197,14 @@ def create_leader_account(data, role, assigned_by):
         username=username,
         first_name=(data.get("first_name") or "").strip(),
         last_name=(data.get("last_name") or "").strip(),
+        gender=(data.get("gender") or "").strip(),
         email=(data.get("email") or "").strip(),
         role=role,
         password=temporary_password,
     )
     profile, _ = MemberProfile.objects.get_or_create(user=user)
     _ensure_person_for_member(profile)
+    _ensure_leader_not_member(profile)
 
     if role == User.Role.FELLOWSHIP_LEADER:
         previous_leader = fellowship.leader if fellowship.leader_id and fellowship.leader_id != user.id else None

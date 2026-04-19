@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  button {
+    background-color: rgb(71 85 105) !important;
+    color: rgb(255 255 255) !important;
+  }
+
+  button:hover:not(:disabled) {
+    background-color: rgb(51 65 85) !important;
+  }
+}

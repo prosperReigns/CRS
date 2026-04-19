@@ -26,6 +26,13 @@ def evaluate_membership(person, *, attendance_delta=0, recalculate_attendance=Fa
     if profile is None:
         return None
 
+    # Member-status profiles are considered stable and do not receive attendance-progress updates.
+    if profile.membership_status == MemberProfile.MembershipStatus.MEMBER:
+        if profile.is_first_timer:
+            profile.is_first_timer = False
+            profile.save(update_fields=["is_first_timer", "updated_at"])
+        return profile
+
     if recalculate_attendance:
         profile.attendance_count = _attendance_total_from_db(person)
     elif attendance_delta:

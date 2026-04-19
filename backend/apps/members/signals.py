@@ -9,12 +9,17 @@ PROFILE_ROLES = {
     User.Role.CELL_LEADER,
     User.Role.FELLOWSHIP_LEADER,
 }
+LEADERSHIP_ROLES = {
+    User.Role.CELL_LEADER,
+    User.Role.FELLOWSHIP_LEADER,
+}
 
 
 @receiver(post_save, sender=User)
 def ensure_member_profile(sender, instance, created, **kwargs):
     if instance.role in PROFILE_ROLES:
         profile, _ = MemberProfile.objects.get_or_create(user=instance)
+        update_fields = []
         if not profile.person_id:
             person = Person.objects.create(
                 first_name=instance.first_name or instance.username,
@@ -23,7 +28,18 @@ def ensure_member_profile(sender, instance, created, **kwargs):
                 email=instance.email or "",
             )
             profile.person = person
-            profile.save(update_fields=["person", "updated_at"])
+            update_fields.append("person")
+
+        if instance.role in LEADERSHIP_ROLES:
+            if profile.membership_status == MemberProfile.MembershipStatus.MEMBER:
+                profile.membership_status = MemberProfile.MembershipStatus.VISITOR
+                update_fields.append("membership_status")
+            if profile.membership_status != MemberProfile.MembershipStatus.FIRST_TIMER and profile.is_first_timer:
+                profile.is_first_timer = False
+                update_fields.append("is_first_timer")
+
+        if update_fields:
+            profile.save(update_fields=[*update_fields, "updated_at"])
 
 
 @receiver(post_save, sender=Attendance)

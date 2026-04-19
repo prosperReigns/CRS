@@ -192,7 +192,7 @@ function LeadershipFlow() {
         fellowship: Number(cellForm.fellowship),
         leader: cellForm.leader ? Number(cellForm.leader) : null,
         meeting_day: cellForm.meeting_day,
-        meeting_time: cellForm.meeting_time,
+        meeting_time: cellForm.meeting_time || null,
         venue: cellForm.venue.trim(),
       });
       setSuccess("Cell created successfully.");
@@ -547,14 +547,12 @@ function LeadershipFlow() {
                   type="time"
                   value={cellForm.meeting_time}
                   onChange={(event) => setCellForm((prev) => ({ ...prev, meeting_time: event.target.value }))}
-                  required
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
                 <textarea
                   value={cellForm.venue}
                   onChange={(event) => setCellForm((prev) => ({ ...prev, venue: event.target.value }))}
-                  placeholder="Venue"
-                  required
+                  placeholder="Venue / Address (optional)"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
                 <button

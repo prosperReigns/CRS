@@ -10,6 +10,7 @@ export interface UserSettings extends User {
 export interface UpdateSettingsPayload {
   first_name?: string;
   last_name?: string;
+  gender?: User["gender"];
   email?: string;
   phone?: string;
   bio?: string;

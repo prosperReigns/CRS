@@ -12,8 +12,8 @@ interface CreateCellPayload {
   fellowship: number;
   leader?: number | null;
   meeting_day: string;
-  meeting_time: string;
-  venue: string;
+  meeting_time?: string | null;
+  venue?: string;
 }
 
 export const getFellowships = async (): Promise<Fellowship[]> => {

@@ -43,6 +43,7 @@ export interface CreateUserPayload {
   username: string;
   first_name?: string;
   last_name?: string;
+  gender?: User["gender"];
   email?: string;
   phone?: string;
   role: User["role"];
@@ -104,6 +105,7 @@ export const createLeader = async (payload: {
   username?: string;
   first_name?: string;
   last_name?: string;
+  gender?: User["gender"];
   email?: string;
   password?: string;
   fellowship_id?: number;

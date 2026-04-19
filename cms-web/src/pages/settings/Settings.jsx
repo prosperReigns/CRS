@@ -20,6 +20,7 @@ function Settings() {
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
+    gender: "",
     email: "",
     phone: "",
     bio: "",
@@ -49,6 +50,7 @@ function Settings() {
       setForm({
         first_name: settings.first_name || "",
         last_name: settings.last_name || "",
+        gender: settings.gender || "",
         email: settings.email || "",
         phone: settings.phone || "",
         bio: settings.bio || "",
@@ -166,6 +168,17 @@ function Settings() {
             placeholder="Last name"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
+          <select
+            value={form.gender}
+            onChange={(event) => setForm((prev) => ({ ...prev, gender: event.target.value }))}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="">Gender (Not specified)</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+            <option value="prefer_not_to_say">Prefer Not To Say</option>
+          </select>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">

@@ -32,6 +32,10 @@ class CellSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "created_at", "fellowship_name"]
+        extra_kwargs = {
+            "meeting_time": {"required": False, "allow_null": True},
+            "venue": {"required": False, "allow_blank": True},
+        }
 
     def validate_leader(self, value):
         if value and value.role != User.Role.CELL_LEADER:

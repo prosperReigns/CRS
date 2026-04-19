@@ -3,6 +3,7 @@ export interface User {
   username: string;
   first_name: string | null;
   last_name: string | null;
+  gender?: "male" | "female" | "other" | "prefer_not_to_say" | "" | null;
   email: string | null;
   phone: string | null;
   home_address?: string | null;
@@ -91,7 +92,7 @@ export interface Cell {
   fellowship_name?: string;
   leader: number | null;
   meeting_day: string;
-  meeting_time: string;
+  meeting_time: string | null;
   venue: string;
   created_at: string;
 }

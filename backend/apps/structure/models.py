@@ -43,8 +43,8 @@ class Cell(models.Model):
         related_name="led_cells",
     )
     meeting_day = models.CharField(max_length=20, choices=MeetingDay.choices, default=MeetingDay.SATURDAY)
-    meeting_time = models.TimeField()
-    venue = models.TextField()
+    meeting_time = models.TimeField(null=True, blank=True)
+    venue = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

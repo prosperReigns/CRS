@@ -16,6 +16,7 @@ class MemberMiniUserSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "gender",
             "email",
             "phone",
             "home_address",

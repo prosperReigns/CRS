@@ -24,12 +24,19 @@ class User(AbstractUser):
         TEACHER = "teacher", "Bible Study Teacher"
         MEMBER = "member", "Member"
 
+    class Gender(models.TextChoices):
+        MALE = "male", "Male"
+        FEMALE = "female", "Female"
+        OTHER = "other", "Other"
+        PREFER_NOT_TO_SAY = "prefer_not_to_say", "Prefer Not To Say"
+
     role = models.CharField(
         max_length=30,
         choices=Role.choices,
         default=Role.MEMBER,
         db_index=True,
     )
+    gender = models.CharField(max_length=20, choices=Gender.choices, blank=True, default="")
     phone = models.CharField(max_length=20, blank=True)
     home_address = models.TextField(blank=True)
     bio = models.TextField(blank=True)
