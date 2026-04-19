@@ -20,6 +20,25 @@ export const getMemberProfile = async (memberId: number): Promise<Member> => {
   }
 };
 
+export interface CreateMemberProfilePayload {
+  user_id: number;
+  cell?: number | null;
+  membership_status?: "visitor" | "first_timer" | "regular" | "member";
+  is_first_timer?: boolean;
+  first_visit_date?: string | null;
+  follow_up_status?: string;
+  visitation_notes?: string;
+}
+
+export const createMemberProfile = async (payload: CreateMemberProfilePayload): Promise<Member> => {
+  try {
+    const response = await API.post<Member>("members/profiles/", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to create member profile."));
+  }
+};
+
 export const updateMemberProfile = async (
   memberId: number,
   data: Partial<Pick<Member, "is_baptised" | "foundation_completed" | "souls_won">>
