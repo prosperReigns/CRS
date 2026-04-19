@@ -1,8 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.utils.crypto import get_random_string
-from django.utils.text import slugify
 from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 
@@ -10,6 +7,8 @@ from apps.reports.models import CellReport
 from ..models import Attendance, MemberProfile, Person
 
 User = get_user_model()
+
+
 ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP = 4
 MAX_USERNAME_LENGTH = 150
 USERNAME_SEED_LIMIT = 24
@@ -65,7 +64,6 @@ def _create_member_profile_for_person(person, attendance_count):
         membership_status=MemberProfile.MembershipStatus.MEMBER,
         attendance_count=max(0, attendance_count),
     )
-
 
 def _attendance_total_from_db(person):
     service_count = Attendance.objects.filter(person=person, present=True).count()
