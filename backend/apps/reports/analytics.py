@@ -41,8 +41,9 @@ class DashboardAnalyticsView(APIView):
 
     def _scope_attendance(self, user):
         members = self._scope_members(user)
-        return Attendance.objects.select_related("service", "member").filter(
-            member__in=members,
+        person_ids = members.exclude(person__isnull=True).values_list("person_id", flat=True)
+        return Attendance.objects.select_related("service", "member", "person").filter(
+            person_id__in=person_ids,
             service__isnull=False,
             present=True,
         )
@@ -52,14 +53,29 @@ class DashboardAnalyticsView(APIView):
         today = timezone.localdate()
         active_since = today - timedelta(days=30)
         trend_since = today - timedelta(weeks=8)
+        previous_window_start = today - timedelta(days=60)
 
         members_qs = self._scope_members(user)
         reports_qs = self._scope_reports(user)
         soul_qs = self._scope_soul_winning(user)
         attendance_qs = self._scope_attendance(user)
 
-        total_members = members_qs.count()
+        total_members = members_qs.filter(membership_status=MemberProfile.MembershipStatus.MEMBER).count()
         active_members = members_qs.filter(last_attended__gte=active_since).count()
+        visitors = members_qs.filter(membership_status=MemberProfile.MembershipStatus.VISITOR).count()
+        first_timers = members_qs.filter(membership_status=MemberProfile.MembershipStatus.FIRST_TIMER).count()
+        recent_members = members_qs.filter(
+            membership_status=MemberProfile.MembershipStatus.MEMBER,
+            join_date__gte=active_since,
+        ).count()
+        previous_members = members_qs.filter(
+            membership_status=MemberProfile.MembershipStatus.MEMBER,
+            join_date__gte=previous_window_start,
+            join_date__lt=active_since,
+        ).count()
+        growth_rate = 0.0
+        if previous_members > 0:
+            growth_rate = ((recent_members - previous_members) / previous_members) * 100
 
         reports_summary = reports_qs.aggregate(
             total=Count("id"),
@@ -100,6 +116,21 @@ class DashboardAnalyticsView(APIView):
                 report_count=Count("id"),
                 total_attendance=Sum("attendance_count"),
                 total_offering=Sum("offering_amount"),
+                member_count=Count(
+                    "attendees",
+                    filter=Q(attendees__member_profile__membership_status=MemberProfile.MembershipStatus.MEMBER),
+                    distinct=True,
+                ),
+                visitor_count=Count(
+                    "attendees",
+                    filter=Q(attendees__member_profile__membership_status=MemberProfile.MembershipStatus.VISITOR),
+                    distinct=True,
+                ),
+                first_timer_count=Count(
+                    "attendees",
+                    filter=Q(attendees__member_profile__membership_status=MemberProfile.MembershipStatus.FIRST_TIMER),
+                    distinct=True,
+                ),
             )
             .order_by("-total_attendance", "-total_offering")[:5]
         )
@@ -110,6 +141,9 @@ class DashboardAnalyticsView(APIView):
                 "report_count": row["report_count"],
                 "total_attendance": row["total_attendance"] or 0,
                 "total_offering": float(row["total_offering"] or 0),
+                "member_count": row["member_count"] or 0,
+                "visitor_count": row["visitor_count"] or 0,
+                "first_timer_count": row["first_timer_count"] or 0,
             }
             for row in top_cells_qs
         ]
@@ -145,6 +179,12 @@ class DashboardAnalyticsView(APIView):
                     "total": total_members,
                     "active": active_members,
                     "inactive": total_members - active_members,
+                },
+                "membership": {
+                    "strength": total_members,
+                    "visitors": visitors,
+                    "first_timers": first_timers,
+                    "growth_rate": round(growth_rate, 2),
                 },
                 "report_stats": {
                     "total": reports_summary["total"] or 0,

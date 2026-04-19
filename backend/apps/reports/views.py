@@ -30,8 +30,8 @@ def scoped_reports(user):
             "service",
         )
         .prefetch_related("images", "comments__author", "activity_logs__actor")
-        .prefetch_related("attendees__user")
-        .prefetch_related("first_timer_attendees__user")
+        .prefetch_related("attendees", "attendees__member_profile")
+        .prefetch_related("first_timer_attendees", "first_timer_attendees__member_profile")
         .all()
     )
 

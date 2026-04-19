@@ -10,14 +10,16 @@ from rest_framework.views import APIView
 
 from apps.accounts.models import User
 from apps.accounts.responsibilities import has_staff_permission
-from .models import Attendance, ChurchService, MemberProfile, SoulWinning, VisitationReport
+from .models import Attendance, ChurchService, MemberProfile, Person, SoulWinning, VisitationReport
 from .permissions import AttendancePermission, MemberProfilePermission, SoulWinningPermission
+from .services import evaluate_membership
 from .serializers import (
     AttendanceSerializer,
     BulkAttendanceSerializer,
     ChurchServiceSerializer,
     FirstTimerFollowUpSerializer,
     MemberProfileSerializer,
+    PersonSerializer,
     PartnershipUpdateSerializer,
     SoulWinningSerializer,
     VisitationReportSerializer,
@@ -25,7 +27,7 @@ from .serializers import (
 
 
 def scoped_member_profiles(user):
-    qs = MemberProfile.objects.select_related("user", "cell", "cell__fellowship")
+    qs = MemberProfile.objects.select_related("user", "person", "cell", "cell__fellowship")
 
     if user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
         return qs
@@ -34,6 +36,20 @@ def scoped_member_profiles(user):
     if user.role == User.Role.CELL_LEADER:
         return qs.filter(cell__leader=user)
     return qs.filter(user=user)
+
+
+def scoped_people(user):
+    qs = Person.objects.prefetch_related("member_profile", "member_profile__cell", "member_profile__cell__fellowship")
+    if user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}:
+        return qs
+    profile_person_ids = scoped_member_profiles(user).exclude(person__isnull=True).values_list("person_id", flat=True)
+    if user.role == User.Role.FELLOWSHIP_LEADER:
+        report_person_ids = Person.objects.filter(cell_reports__cell__fellowship__leader=user).values_list("id", flat=True)
+        return qs.filter(Q(id__in=profile_person_ids) | Q(id__in=report_person_ids)).distinct()
+    if user.role == User.Role.CELL_LEADER:
+        report_person_ids = Person.objects.filter(cell_reports__cell__leader=user).values_list("id", flat=True)
+        return qs.filter(Q(id__in=profile_person_ids) | Q(id__in=report_person_ids)).distinct()
+    return qs.filter(id__in=profile_person_ids)
 
 
 def ensure_member_in_scope(user, member_id, message):
@@ -85,7 +101,11 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
             "view_new_members",
             "Only pastor, admin, or first timer coordinators can view first timers.",
         )
-        qs = scoped_member_profiles(request.user).filter(is_first_timer=True)
+        qs = scoped_member_profiles(request.user).filter(
+            membership_status=MemberProfile.MembershipStatus.FIRST_TIMER,
+            person__service_attendance_records__present=True,
+            person__service_attendance_records__service__isnull=False,
+        ).distinct()
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
@@ -93,9 +113,13 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
     def assigned_visitation_first_timers(self, request):
         if request.user.role not in {User.Role.FELLOWSHIP_LEADER, User.Role.CELL_LEADER}:
             raise PermissionDenied("Only fellowship leaders or cell leaders can view assigned visitation members.")
-        qs = scoped_member_profiles(request.user).filter(is_first_timer=True).filter(
+        qs = scoped_member_profiles(request.user).filter(
+            membership_status=MemberProfile.MembershipStatus.FIRST_TIMER,
+            person__service_attendance_records__present=True,
+            person__service_attendance_records__service__isnull=False,
+        ).filter(
             Q(visitation_fellowship_leader=request.user) | Q(visitation_cell_leader=request.user)
-        )
+        ).distinct()
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
@@ -107,7 +131,7 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
             "Only pastor, admin, or first timer coordinators can update follow-up records.",
         )
         member_profile = self.get_object()
-        if not member_profile.is_first_timer:
+        if member_profile.membership_status != MemberProfile.MembershipStatus.FIRST_TIMER:
             raise ValidationError({"is_first_timer": "Selected member is not marked as a first timer."})
         serializer = FirstTimerFollowUpSerializer(member_profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -162,17 +186,18 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     permission_classes = [AttendancePermission]
 
     def get_queryset(self):
-        profiles = scoped_member_profiles(self.request.user)
-        return Attendance.objects.select_related("member", "member__user", "recorded_by", "service").filter(member__in=profiles)
+        people = scoped_people(self.request.user)
+        return Attendance.objects.select_related("person", "member", "member__user", "recorded_by", "service").filter(
+            person__in=people
+        )
 
     def perform_create(self, serializer):
-        member = serializer.validated_data["member"]
-        ensure_member_in_scope(
-            self.request.user,
-            member.id,
-            "You cannot record attendance for this member.",
-        )
-        serializer.save(recorded_by=self.request.user)
+        person = serializer.validated_data.get("person")
+        if person and not scoped_people(self.request.user).filter(id=person.id).exists():
+            raise PermissionDenied("You cannot record attendance for this person.")
+        record = serializer.save(recorded_by=self.request.user)
+        if record.person_id:
+            evaluate_membership(record.person)
 
     @action(detail=False, methods=["post"], url_path="bulk-mark")
     @transaction.atomic
@@ -187,37 +212,42 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         date = serializer.validated_data["date"]
         service = serializer.validated_data["service"]
         present = serializer.validated_data["present"]
-        requested_ids = serializer.validated_data["member_ids"]
+        requested_ids = serializer.validated_data["person_ids"]
 
-        allowed_ids = set(scoped_member_profiles(user).values_list("id", flat=True))
+        allowed_ids = set(scoped_people(user).values_list("id", flat=True))
         invalid_ids = sorted(set(requested_ids) - allowed_ids)
         if invalid_ids:
-            raise ValidationError({"member_ids": f"Not allowed for member IDs: {invalid_ids}"})
+            raise ValidationError({"person_ids": f"Not allowed for person IDs: {invalid_ids}"})
 
         existing_ids = set(
             Attendance.objects.filter(
-                member_id__in=requested_ids,
+                person_id__in=requested_ids,
                 date=date,
                 service=service,
-            ).values_list("member_id", flat=True)
+            ).values_list("person_id", flat=True)
         )
 
-        to_create_ids = [member_id for member_id in requested_ids if member_id not in existing_ids]
+        to_create_ids = [person_id for person_id in requested_ids if person_id not in existing_ids]
+        profile_map = {
+            person_id: member_id
+            for person_id, member_id in MemberProfile.objects.filter(person_id__in=to_create_ids).values_list("person_id", "id")
+        }
         records = [
             Attendance(
-                member_id=member_id,
+                person_id=person_id,
+                member_id=profile_map.get(person_id),
                 date=date,
                 service=service,
                 present=present,
                 recorded_by=user,
             )
-            for member_id in to_create_ids
+            for person_id in to_create_ids
         ]
 
         Attendance.objects.bulk_create(records)
 
         if present and to_create_ids:
-            MemberProfile.objects.filter(id__in=to_create_ids).update(
+            MemberProfile.objects.filter(person_id__in=to_create_ids).update(
                 last_attended=Case(
                     When(last_attended__isnull=True, then=Value(date)),
                     When(last_attended__lt=date, then=Value(date)),
@@ -225,6 +255,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     output_field=DateField(),
                 )
             )
+            for person in Person.objects.filter(id__in=to_create_ids):
+                profile = getattr(person, "member_profile", None)
+                if profile and profile.membership_status == MemberProfile.MembershipStatus.VISITOR:
+                    profile.membership_status = MemberProfile.MembershipStatus.FIRST_TIMER
+                    profile.is_first_timer = True
+                    if not profile.first_visit_date:
+                        profile.first_visit_date = date
+                    profile.save(update_fields=["membership_status", "is_first_timer", "first_visit_date", "updated_at"])
+                evaluate_membership(person)
 
         return Response(
             {
@@ -270,7 +309,7 @@ class VisitationReportViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Only fellowship leaders or cell leaders can submit visitation reports.")
 
     def _is_assigned_member(self, user, member):
-        return member.is_first_timer and (
+        return member.membership_status == MemberProfile.MembershipStatus.FIRST_TIMER and (
             member.visitation_fellowship_leader_id == user.id or member.visitation_cell_leader_id == user.id
         )
 
@@ -306,3 +345,16 @@ class VisitationReportViewSet(viewsets.ModelViewSet):
         report.approved_at = timezone.now()
         report.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
         return Response(self.get_serializer(report).data)
+
+
+class PersonViewSet(viewsets.ModelViewSet):
+    serializer_class = PersonSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Person.objects.all().order_by("first_name", "last_name", "id")
+
+    def get_queryset(self):
+        qs = scoped_people(self.request.user)
+        status_filter = self.request.query_params.get("membership_status")
+        if status_filter:
+            qs = qs.filter(member_profile__membership_status=status_filter)
+        return qs

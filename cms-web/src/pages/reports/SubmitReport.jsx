@@ -1,11 +1,15 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { createReport } from "../../api/reports";
-import { getMembers } from "../../api/members";
+import { createPerson, getMembers, getPeople } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
 import { inferReportTypeFromDate, REPORT_TYPE_OPTIONS } from "./reportType";
 
-const isMemberAttendeeId = (id) => typeof id === "number";
-const isCustomAttendeeId = (id) => typeof id === "string";
+const statusLabel = {
+  visitor: "Visitor",
+  first_timer: "First Timer",
+  regular: "Regular",
+  member: "Member",
+};
 
 function SubmitReport() {
   const { user } = useContext(AuthContext);
@@ -19,39 +23,37 @@ function SubmitReport() {
     summary: "",
   });
   const [members, setMembers] = useState([]);
+  const [people, setPeople] = useState([]);
   const [attendees, setAttendees] = useState([]);
   const [firstTimerAttendees, setFirstTimerAttendees] = useState([]);
+  const [membershipFilter, setMembershipFilter] = useState("all");
   const [attendeeSearch, setAttendeeSearch] = useState("");
-  const [customAttendeeInput, setCustomAttendeeInput] = useState("");
-  const [customAttendees, setCustomAttendees] = useState([]);
-  const [customFirstTimers, setCustomFirstTimers] = useState([]);
+  const [newPersonName, setNewPersonName] = useState("");
   const [images, setImages] = useState([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
-  const customAttendeeCounter = useRef(0);
   const [submitting, setSubmitting] = useState(false);
+  const [addingPerson, setAddingPerson] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    getMembers()
-      .then((data) => {
-        setMembers(data);
-        const defaultCellId = data.find((member) => member.cell)?.cell;
+    Promise.all([getMembers(), getPeople()])
+      .then(([memberData, peopleData]) => {
+        setMembers(memberData);
+        setPeople(peopleData);
+        const defaultCellId = memberData.find((member) => member.cell)?.cell;
         if (defaultCellId) {
           setForm((prev) => (prev.cell ? prev : { ...prev, cell: String(defaultCellId) }));
         }
       })
-      .catch((err) => setError(err.message || "Failed to load members."));
+      .catch((err) => setError(err.message || "Failed to load people."));
   }, []);
 
-  const selectedMembers = useMemo(
-    () => members.filter((member) => attendees.includes(member.id)),
-    [members, attendees]
-  );
-  const selectedCustomAttendees = useMemo(
-    () => customAttendees.filter((entry) => attendees.includes(entry.id)),
-    [customAttendees, attendees]
-  );
+  useEffect(() => {
+    const urls = images.map((img) => URL.createObjectURL(img));
+    setImagePreviewUrls(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [images]);
 
   const cellOptions = useMemo(() => {
     const uniqueCells = new Map();
@@ -63,85 +65,60 @@ function SubmitReport() {
     return Array.from(uniqueCells.values());
   }, [members]);
 
-  const selectedCellId = form.cell ? Number(form.cell) : null;
-  const membersForSelectedCell = useMemo(() => {
-    if (!selectedCellId) return [];
-    return members.filter((member) => member.cell === selectedCellId);
-  }, [members, selectedCellId]);
-
-  const visibleMembers = useMemo(() => {
+  const filteredPeople = useMemo(() => {
     const query = attendeeSearch.trim().toLowerCase();
-    if (!query) return membersForSelectedCell;
-    return membersForSelectedCell.filter((member) => {
-      const fullNameLower = `${member.user?.first_name || ""} ${member.user?.last_name || ""}`
-        .trim()
-        .toLowerCase();
+    return people.filter((person) => {
+      if (membershipFilter !== "all" && person.membership_status !== membershipFilter) return false;
+      if (!query) return true;
+      const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim().toLowerCase();
       return (
-        member.user?.username?.toLowerCase().includes(query) ||
-        fullNameLower.includes(query) ||
-        member.cell_name?.toLowerCase().includes(query)
+        fullName.includes(query) ||
+        (person.phone || "").toLowerCase().includes(query) ||
+        (person.email || "").toLowerCase().includes(query)
       );
     });
-  }, [membersForSelectedCell, attendeeSearch]);
-
-  useEffect(() => {
-    if (!selectedCellId) return;
-    const validMemberIds = new Set(membersForSelectedCell.map((member) => member.id));
-    setAttendees((prev) =>
-      prev.filter((id) => (isMemberAttendeeId(id) ? validMemberIds.has(id) : isCustomAttendeeId(id)))
-    );
-    setFirstTimerAttendees((prev) => prev.filter((id) => validMemberIds.has(id)));
-  }, [membersForSelectedCell, selectedCellId]);
+  }, [people, attendeeSearch, membershipFilter]);
 
   const toggleAttendee = (id) => {
     setAttendees((prev) => {
       if (prev.includes(id)) {
-        setFirstTimerAttendees((timerPrev) => timerPrev.filter((memberId) => memberId !== id));
-        setCustomFirstTimers((timerPrev) => timerPrev.filter((memberId) => memberId !== id));
-        return prev.filter((memberId) => memberId !== id);
+        setFirstTimerAttendees((timerPrev) => timerPrev.filter((personId) => personId !== id));
+        return prev.filter((personId) => personId !== id);
       }
       return [...prev, id];
     });
   };
 
-  useEffect(() => {
-    const urls = images.map((img) => URL.createObjectURL(img));
-    setImagePreviewUrls(urls);
-    return () => {
-      urls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [images]);
-
   const toggleFirstTimerAttendee = (id) => {
     if (!attendees.includes(id)) return;
-    setFirstTimerAttendees((prev) => (prev.includes(id) ? prev.filter((memberId) => memberId !== id) : [...prev, id]));
+    setFirstTimerAttendees((prev) => (prev.includes(id) ? prev.filter((personId) => personId !== id) : [...prev, id]));
   };
 
-  const addCustomAttendee = () => {
-    const normalized = customAttendeeInput.trim();
-    if (!normalized) return;
-    customAttendeeCounter.current += 1;
-    const id = `custom-${customAttendeeCounter.current}`;
-    setCustomAttendees((prev) => [...prev, { id, name: normalized }]);
-    setAttendees((prev) => [...prev, id]);
-    setCustomAttendeeInput("");
-  };
-
-  const toggleCustomFirstTimer = (id) => {
-    if (!attendees.includes(id)) return;
-    setCustomFirstTimers((prev) => (prev.includes(id) ? prev.filter((memberId) => memberId !== id) : [...prev, id]));
+  const addVisitor = async () => {
+    const raw = newPersonName.trim();
+    if (!raw) return;
+    const [firstName, ...others] = raw.split(/\s+/);
+    const lastName = others.join(" ");
+    setAddingPerson(true);
+    setError("");
+    try {
+      const created = await createPerson({ first_name: firstName, last_name: lastName, phone: "", email: "" });
+      setPeople((prev) => [created, ...prev]);
+      setAttendees((prev) => [...prev, created.id]);
+      setNewPersonName("");
+    } catch (err) {
+      setError(err.message || "Failed to add visitor.");
+    } finally {
+      setAddingPerson(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
-
-    const selectedMemberIds = attendees.filter(isMemberAttendeeId);
-    const selectedCustomNames = customAttendees.filter((entry) => attendees.includes(entry.id)).map((entry) => entry.name);
-
-    if (selectedMemberIds.length < 1) {
-      setError("Select at least one member from the selected cell.");
+    if (attendees.length < 1) {
+      setError("Select at least one attendee.");
       return;
     }
     if (images.length < 1) {
@@ -154,42 +131,32 @@ function SubmitReport() {
     formData.append("cell", form.cell);
     formData.append("meeting_date", form.meeting_date);
     formData.append("meeting_time", form.meeting_time);
-    if (form.meeting_duration_minutes) {
-      formData.append("meeting_duration_minutes", form.meeting_duration_minutes);
-    }
-    const computedNewMembers = firstTimerAttendees.length + customFirstTimers.length;
+    if (form.meeting_duration_minutes) formData.append("meeting_duration_minutes", form.meeting_duration_minutes);
     formData.append("report_type", form.report_type);
-    formData.append("new_members", String(computedNewMembers));
+    formData.append("new_members", String(firstTimerAttendees.length));
     formData.append("offering_amount", form.offering_amount);
     formData.append("summary", form.summary);
-    formData.append("attendee_names", selectedCustomNames.join(", "));
-    selectedMemberIds.forEach((attendeeId) => {
-      formData.append("attendees", String(attendeeId));
-    });
-    firstTimerAttendees.forEach((attendeeId) => {
-      formData.append("first_timer_attendees", String(attendeeId));
-    });
-    images.forEach((img) => {
-      formData.append("images[]", img);
-    });
+    attendees.forEach((attendeeId) => formData.append("attendees", String(attendeeId)));
+    firstTimerAttendees.forEach((attendeeId) => formData.append("first_timer_attendees", String(attendeeId)));
+    images.forEach((img) => formData.append("images[]", img));
 
     try {
       await createReport(formData);
       setSuccess("Report submitted successfully.");
-        setForm({
-          cell: form.cell,
-          meeting_date: "",
-          meeting_time: "",
-          meeting_duration_minutes: "",
-          report_type: "",
-          offering_amount: "",
-          summary: "",
+      setForm({
+        cell: form.cell,
+        meeting_date: "",
+        meeting_time: "",
+        meeting_duration_minutes: "",
+        report_type: "",
+        offering_amount: "",
+        summary: "",
       });
       setAttendees([]);
       setFirstTimerAttendees([]);
-      setCustomAttendees([]);
-      setCustomFirstTimers([]);
       setImages([]);
+      const refreshedPeople = await getPeople();
+      setPeople(refreshedPeople);
     } catch (err) {
       setError(err.message || "Error submitting report.");
     } finally {
@@ -212,11 +179,7 @@ function SubmitReport() {
 
       <div className="space-y-2">
         {imagePreviewUrls[0] ? (
-          <img
-            src={imagePreviewUrls[0]}
-            alt="Meeting preview"
-            className="h-64 w-full rounded-2xl border border-slate-200 object-cover"
-          />
+          <img src={imagePreviewUrls[0]} alt="Meeting preview" className="h-64 w-full rounded-2xl border border-slate-200 object-cover" />
         ) : (
           <div className="flex h-52 w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
             Add a meeting image
@@ -257,130 +220,105 @@ function SubmitReport() {
         type="date"
         className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
         value={form.meeting_date}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            meeting_date: e.target.value,
-            report_type: inferReportTypeFromDate(e.target.value),
-          })
-        }
+        onChange={(e) => setForm({ ...form, meeting_date: e.target.value, report_type: inferReportTypeFromDate(e.target.value) })}
         required
       />
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-slate-700">Meeting Time</span>
-          <input
-            type="time"
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-            value={form.meeting_time}
-            onChange={(e) => setForm({ ...form, meeting_time: e.target.value })}
-            required
-          />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-slate-700">Meeting Duration (minutes)</span>
-          <input
-            type="number"
-            min="1"
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-            value={form.meeting_duration_minutes}
-            onChange={(e) => setForm({ ...form, meeting_duration_minutes: e.target.value })}
-            required
-          />
-        </label>
+        <input
+          type="time"
+          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          value={form.meeting_time}
+          onChange={(e) => setForm({ ...form, meeting_time: e.target.value })}
+          required
+        />
+        <input
+          type="number"
+          min="1"
+          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          value={form.meeting_duration_minutes}
+          onChange={(e) => setForm({ ...form, meeting_duration_minutes: e.target.value })}
+          required
+        />
       </div>
 
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-slate-700">Report Type</span>
+      <select
+        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+        value={form.report_type}
+        onChange={(e) => setForm({ ...form, report_type: e.target.value })}
+        required
+      >
+        <option value="">Select report type</option>
+        {REPORT_TYPE_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      <div className="grid gap-2 md:grid-cols-2">
+        <input
+          placeholder="Search people..."
+          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          value={attendeeSearch}
+          onChange={(e) => setAttendeeSearch(e.target.value)}
+        />
         <select
           className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-          value={form.report_type}
-          onChange={(e) => setForm({ ...form, report_type: e.target.value })}
-          required
+          value={membershipFilter}
+          onChange={(e) => setMembershipFilter(e.target.value)}
         >
-          <option value="">Select report type</option>
-          {REPORT_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          <option value="all">All People</option>
+          <option value="member">Members</option>
+          <option value="visitor">Visitors</option>
+          <option value="first_timer">First Timers</option>
+          <option value="regular">Regular Attenders</option>
         </select>
-      </label>
+      </div>
 
-      <input
-        placeholder="Search members..."
-        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-        value={attendeeSearch}
-        onChange={(e) => setAttendeeSearch(e.target.value)}
-      />
       <div className="flex gap-2">
         <input
-          placeholder="Add attendee by name"
+          placeholder="Add new visitor name"
           className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
-          value={customAttendeeInput}
-          onChange={(e) => setCustomAttendeeInput(e.target.value)}
+          value={newPersonName}
+          onChange={(e) => setNewPersonName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              addCustomAttendee();
+              addVisitor();
             }
           }}
         />
         <button
           type="button"
-          onClick={addCustomAttendee}
-          className="rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+          onClick={addVisitor}
+          disabled={addingPerson}
+          className="rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-70"
         >
-          Add
+          {addingPerson ? "Adding..." : "Add Visitor"}
         </button>
       </div>
 
-      <p className="text-sm text-slate-600">
-        Selected attendees: <strong>{attendees.length}</strong>
-      </p>
+      <p className="text-sm text-slate-600">Selected attendees: <strong>{attendees.length}</strong></p>
       <div className="max-h-56 space-y-1 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
-        {visibleMembers.map((member) => (
-          <div key={member.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-white">
+        {filteredPeople.map((person) => (
+          <div key={person.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-white">
             <label className="flex min-w-0 items-center gap-2">
               <input
                 type="checkbox"
-                checked={attendees.includes(member.id)}
-                onChange={() => toggleAttendee(member.id)}
+                checked={attendees.includes(person.id)}
+                onChange={() => toggleAttendee(person.id)}
                 className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
               />
               <span className="truncate">
-                {member.user?.username} {member.cell_name ? `(${member.cell_name})` : ""}
+                {`${person.first_name} ${person.last_name}`.trim()} - {statusLabel[person.membership_status] || "Visitor"}
               </span>
             </label>
             <label className="flex items-center gap-1 text-xs text-slate-600">
               <input
                 type="checkbox"
-                checked={firstTimerAttendees.includes(member.id)}
-                disabled={!attendees.includes(member.id)}
-                onChange={() => toggleFirstTimerAttendee(member.id)}
-                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-              />
-              First timer
-            </label>
-          </div>
-        ))}
-        {customAttendees.map((entry) => (
-          <div key={entry.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-white">
-            <label className="flex min-w-0 items-center gap-2">
-              <input
-                type="checkbox"
-                checked={attendees.includes(entry.id)}
-                onChange={() => toggleAttendee(entry.id)}
-                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-              />
-              <span className="truncate">{entry.name}</span>
-            </label>
-            <label className="flex items-center gap-1 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={customFirstTimers.includes(entry.id)}
-                disabled={!attendees.includes(entry.id)}
-                onChange={() => toggleCustomFirstTimer(entry.id)}
+                checked={firstTimerAttendees.includes(person.id)}
+                disabled={!attendees.includes(person.id)}
+                onChange={() => toggleFirstTimerAttendee(person.id)}
                 className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
               />
               First timer
@@ -389,26 +327,11 @@ function SubmitReport() {
         ))}
       </div>
 
-      {(selectedMembers.length > 0 || selectedCustomAttendees.length > 0) && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="mb-2 text-sm font-medium text-slate-700">Selected members preview:</p>
-          <ul className="grid gap-1 text-sm text-slate-600">
-            {selectedMembers.map((member) => (
-              <li key={member.id}>{member.user?.username}</li>
-            ))}
-            {selectedCustomAttendees.map((entry) => (
-              <li key={entry.id}>{entry.name}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <input
-        value={`First timers: ${firstTimerAttendees.length + customFirstTimers.length}`}
+        value={`First timers: ${firstTimerAttendees.length}`}
         className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 text-slate-700"
         disabled
       />
-
       <input
         placeholder="Offering"
         type="number"
@@ -419,7 +342,6 @@ function SubmitReport() {
         onChange={(e) => setForm({ ...form, offering_amount: e.target.value })}
         required
       />
-
       <textarea
         placeholder="Summary"
         className="min-h-28 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
@@ -427,12 +349,10 @@ function SubmitReport() {
         onChange={(e) => setForm({ ...form, summary: e.target.value })}
         required
       />
-
       <button
         type="submit"
         className="w-full rounded-lg bg-slate-600 px-4 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
         disabled={submitting}
-        aria-busy={submitting}
       >
         {submitting ? "Submitting..." : "Submit"}
       </button>

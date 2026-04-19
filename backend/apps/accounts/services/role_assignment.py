@@ -3,7 +3,7 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from apps.members.models import MemberProfile
+from apps.members.models import MemberProfile, Person
 from apps.structure.models import Cell, Fellowship
 from ..responsibilities import has_staff_permission
 from ..models import User
@@ -52,6 +52,21 @@ def _ensure_user_for_member(member_profile):
     return user, temporary_password
 
 
+def _ensure_person_for_member(member_profile):
+    if member_profile.person_id:
+        return member_profile.person
+    user = getattr(member_profile, "user", None)
+    person = Person.objects.create(
+        first_name=(getattr(user, "first_name", "") or getattr(user, "username", "") or "Member"),
+        last_name=(getattr(user, "last_name", "") or ""),
+        phone=(getattr(user, "phone", "") or ""),
+        email=(getattr(user, "email", "") or ""),
+    )
+    member_profile.person = person
+    member_profile.save(update_fields=["person", "updated_at"])
+    return person
+
+
 def _demote_if_unassigned(previous_leader):
     if not previous_leader:
         return
@@ -79,6 +94,7 @@ def assign_cell_leader(member_profile, cell, assigned_by):
         raise PermissionDenied("You can only assign cell leaders in your fellowship.")
 
     user, temporary_password = _ensure_user_for_member(member_profile)
+    _ensure_person_for_member(member_profile)
     previous_leader = cell.leader if cell.leader_id and cell.leader_id != user.id else None
 
     if user.role != User.Role.CELL_LEADER:
@@ -109,6 +125,7 @@ def assign_fellowship_leader(member_profile, fellowship, assigned_by):
         raise PermissionDenied("Only staff with cell ministry responsibility can assign fellowship leaders.")
 
     user, temporary_password = _ensure_user_for_member(member_profile)
+    _ensure_person_for_member(member_profile)
     previous_leader = fellowship.leader if fellowship.leader_id and fellowship.leader_id != user.id else None
 
     if user.role != User.Role.FELLOWSHIP_LEADER:
@@ -171,6 +188,7 @@ def create_leader_account(data, role, assigned_by):
         password=temporary_password,
     )
     profile, _ = MemberProfile.objects.get_or_create(user=user)
+    _ensure_person_for_member(profile)
 
     if role == User.Role.FELLOWSHIP_LEADER:
         previous_leader = fellowship.leader if fellowship.leader_id and fellowship.leader_id != user.id else None
