@@ -99,6 +99,7 @@ function MemberProfile() {
           <div className="grid flex-1 gap-3 md:grid-cols-2">
             <input value={member.user?.first_name || ""} readOnly placeholder="First Name" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
             <input value={member.user?.last_name || ""} readOnly placeholder="Surname" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
+            <input value={member.user?.gender || ""} readOnly placeholder="Gender" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
             <input value={member.user?.phone || ""} readOnly placeholder="Phone No" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
             <input value={member.user?.email || ""} readOnly placeholder="Email" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
             <textarea
