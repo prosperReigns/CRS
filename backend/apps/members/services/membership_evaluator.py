@@ -33,17 +33,14 @@ def _unique_username(seed):
     while User.objects.filter(username=candidate).exists():
         index += 1
         if index > 1000:
-            random_tail = get_random_string(min(8, MAX_USERNAME_LENGTH)).lower()
-            if MAX_USERNAME_LENGTH > len(random_tail):
-                prefix = base[: max(0, MAX_USERNAME_LENGTH - len(random_tail) - 1)]
-                candidate = f"{prefix}_{random_tail}" if prefix else random_tail
-            else:
-                candidate = random_tail[:MAX_USERNAME_LENGTH]
+            random_tail = get_random_string(8).lower()
+            prefix = base[: max(0, MAX_USERNAME_LENGTH - len(random_tail) - 1)]
+            candidate = f"{prefix}_{random_tail}" if prefix else random_tail[:MAX_USERNAME_LENGTH]
             if not User.objects.filter(username=candidate).exists():
                 return candidate
         suffix = f"_{index}"
         prefix_length = max(0, MAX_USERNAME_LENGTH - len(suffix))
-        candidate = f"{base[:prefix_length]}{suffix}" if prefix_length else suffix[-MAX_USERNAME_LENGTH:]
+        candidate = f"{base[:prefix_length]}{suffix}" if prefix_length else f"m{suffix}"[-MAX_USERNAME_LENGTH:]
     return candidate
 
 
