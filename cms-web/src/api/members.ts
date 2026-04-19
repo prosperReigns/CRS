@@ -75,6 +75,7 @@ export const markAttendance = async (data: AttendanceBulkRequest): Promise<Atten
 
 export const getPeople = async (params?: {
   membership_status?: "visitor" | "first_timer" | "regular" | "member";
+  cell?: number;
 }): Promise<Person[]> => {
   try {
     const response = await API.get<Person[] | { results: Person[] }>("members/people/", { params });

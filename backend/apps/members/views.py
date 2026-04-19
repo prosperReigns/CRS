@@ -351,6 +351,13 @@ class PersonViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = scoped_people(self.request.user)
+        cell_id = self.request.query_params.get("cell")
+        if cell_id:
+            qs = qs.filter(
+                Q(member_profile__cell_id=cell_id)
+                | Q(cell_memberships__cell_id=cell_id, cell_memberships__is_active=True)
+                | Q(cell_reports__cell_id=cell_id)
+            ).distinct()
         status_filter = self.request.query_params.get("membership_status")
         if status_filter:
             qs = qs.filter(member_profile__membership_status=status_filter)

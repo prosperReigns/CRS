@@ -37,10 +37,9 @@ function SubmitReport() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    Promise.all([getMembers(), getPeople()])
-      .then(([memberData, peopleData]) => {
+    getMembers()
+      .then((memberData) => {
         setMembers(memberData);
-        setPeople(peopleData);
         const defaultCellId = memberData.find((member) => member.cell)?.cell;
         if (defaultCellId) {
           setForm((prev) => (prev.cell ? prev : { ...prev, cell: String(defaultCellId) }));
@@ -48,6 +47,13 @@ function SubmitReport() {
       })
       .catch((err) => setError(err.message || "Failed to load people."));
   }, []);
+
+  useEffect(() => {
+    const selectedCellId = form.cell ? Number(form.cell) : undefined;
+    getPeople(selectedCellId ? { cell: selectedCellId } : undefined)
+      .then((peopleData) => setPeople(peopleData))
+      .catch((err) => setError(err.message || "Failed to load people."));
+  }, [form.cell]);
 
   useEffect(() => {
     const urls = images.map((img) => URL.createObjectURL(img));
@@ -163,7 +169,7 @@ function SubmitReport() {
       setAttendees([]);
       setFirstTimerAttendees([]);
       setImages([]);
-      const refreshedPeople = await getPeople();
+      const refreshedPeople = await getPeople(form.cell ? { cell: Number(form.cell) } : undefined);
       setPeople(refreshedPeople);
     } catch (err) {
       setError(err.message || "Error submitting report.");
@@ -211,7 +217,11 @@ function SubmitReport() {
         <select
           className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
           value={form.cell}
-          onChange={(e) => setForm({ ...form, cell: e.target.value })}
+          onChange={(e) => {
+            setForm({ ...form, cell: e.target.value });
+            setAttendees([]);
+            setFirstTimerAttendees([]);
+          }}
           required
           disabled={cellOptions.length <= 1}
         >
