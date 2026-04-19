@@ -342,7 +342,7 @@ class PersonSerializer(serializers.ModelSerializer):
     membership_status = serializers.SerializerMethodField(read_only=True)
     attendance_count = serializers.SerializerMethodField(read_only=True)
     is_member = serializers.SerializerMethodField(read_only=True)
-    cell_name = serializers.CharField(source="member_profile.cell.name", read_only=True, allow_null=True)
+    cell_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Person
@@ -374,3 +374,9 @@ class PersonSerializer(serializers.ModelSerializer):
 
     def get_is_member(self, obj):
         return self.get_membership_status(obj) == MemberProfile.MembershipStatus.MEMBER
+
+    def get_cell_name(self, obj):
+        profile = getattr(obj, "member_profile", None)
+        if not profile or not profile.cell_id:
+            return None
+        return profile.cell.name
