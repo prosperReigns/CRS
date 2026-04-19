@@ -121,14 +121,22 @@ function Visitation() {
         role: "member",
       });
 
-      const createdMember = await createMemberProfile({
-        user_id: createdUser.id,
-        membership_status: "first_timer",
-        is_first_timer: true,
-        first_visit_date: newFirstTimerForm.first_visit_date || null,
-        follow_up_status: newFirstTimerForm.follow_up_status || "pending",
-        visitation_notes: newFirstTimerForm.visitation_notes.trim(),
-      });
+      let createdMember;
+      try {
+        createdMember = await createMemberProfile({
+          user_id: createdUser.id,
+          membership_status: "first_timer",
+          is_first_timer: true,
+          first_visit_date: newFirstTimerForm.first_visit_date || null,
+          follow_up_status: newFirstTimerForm.follow_up_status || "pending",
+          visitation_notes: newFirstTimerForm.visitation_notes.trim(),
+        });
+      } catch (profileError) {
+        throw new Error(
+          profileError?.message ||
+            `User account "${createdUser.username}" was created, but first-timer profile creation failed.`
+        );
+      }
 
       setMembers((prev) => [
         {
