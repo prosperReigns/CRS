@@ -46,4 +46,6 @@ class AttendancePermission(MemberProfilePermission):
         return request.user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}
 
     def has_object_permission(self, request, view, obj):
+        if obj.member is None:
+            return request.user.role in {User.Role.PASTOR, User.Role.ADMIN, User.Role.STAFF}
         return super().has_object_permission(request, view, obj.member)

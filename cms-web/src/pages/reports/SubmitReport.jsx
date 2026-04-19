@@ -7,8 +7,13 @@ import { inferReportTypeFromDate, REPORT_TYPE_OPTIONS } from "./reportType";
 const statusLabel = {
   visitor: "Visitor",
   first_timer: "First Timer",
-  regular: "Regular",
   member: "Member",
+};
+
+const statusBadge = {
+  member: "bg-emerald-100 text-emerald-700",
+  first_timer: "bg-amber-100 text-amber-700",
+  visitor: "bg-slate-100 text-slate-700",
 };
 
 function SubmitReport() {
@@ -279,7 +284,6 @@ function SubmitReport() {
           <option value="member">Members</option>
           <option value="visitor">Visitors</option>
           <option value="first_timer">First Timers</option>
-          <option value="regular">Regular Attenders</option>
         </select>
       </div>
 
@@ -322,6 +326,13 @@ function SubmitReport() {
                 {person.cell_name ? ` (${person.cell_name})` : ""}
               </span>
             </label>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                statusBadge[person.status || person.membership_status] || "bg-slate-100 text-slate-700"
+              }`}
+            >
+              {statusLabel[person.status || person.membership_status] || "Visitor"}
+            </span>
             <label className="flex items-center gap-1 text-xs text-slate-600">
               <input
                 type="checkbox"

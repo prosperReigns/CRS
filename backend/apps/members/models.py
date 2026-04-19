@@ -268,6 +268,31 @@ class Attendance(models.Model):
         return f"{person_label} - {self.date} ({service_label})"
 
 
+class FirstTimerEvent(models.Model):
+    class EventType(models.TextChoices):
+        CELL = "cell", "Cell"
+        SERVICE = "service", "Service"
+
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="first_timer_events")
+    event_type = models.CharField(max_length=20, choices=EventType.choices)
+    event_date = models.DateField()
+    handled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-event_date", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["person", "event_type"], name="uniq_first_timer_event_per_source"),
+        ]
+        indexes = [
+            models.Index(fields=["event_type", "handled"]),
+            models.Index(fields=["person", "event_type"]),
+        ]
+
+    def __str__(self):
+        return f"{self.person} - {self.event_type} ({self.event_date})"
+
+
 class CellMembership(models.Model):
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="cell_memberships")
     cell = models.ForeignKey(Cell, on_delete=models.CASCADE, related_name="person_memberships")

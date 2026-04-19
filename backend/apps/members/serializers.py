@@ -2,8 +2,8 @@ from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from rest_framework import serializers
 
-from .models import Attendance, ChurchService, MemberProfile, Person, SoulWinning, VisitationReport
-from .services import evaluate_membership
+from .models import Attendance, ChurchService, FirstTimerEvent, MemberProfile, Person, SoulWinning, VisitationReport
+from .services import attendance_total, derived_person_status, ensure_first_timer_event, evaluate_membership
 
 User = get_user_model()
 
@@ -313,6 +313,11 @@ class AttendanceSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         record = super().create(validated_data)
         if record.person_id and record.present:
+            ensure_first_timer_event(
+                person=record.person,
+                event_type=FirstTimerEvent.EventType.SERVICE,
+                event_date=record.date,
+            )
             evaluate_membership(record.person, attendance_delta=1)
         return record
 
@@ -357,6 +362,8 @@ class BulkAttendanceSerializer(serializers.Serializer):
 
 
 class PersonSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField(read_only=True)
+    status = serializers.SerializerMethodField(read_only=True)
     membership_status = serializers.SerializerMethodField(read_only=True)
     attendance_count = serializers.SerializerMethodField(read_only=True)
     is_member = serializers.SerializerMethodField(read_only=True)
@@ -368,27 +375,29 @@ class PersonSerializer(serializers.ModelSerializer):
             "id",
             "first_name",
             "last_name",
+            "name",
             "phone",
             "email",
             "created_at",
+            "status",
             "membership_status",
             "attendance_count",
             "is_member",
             "cell_name",
         ]
-        read_only_fields = ["id", "created_at", "membership_status", "attendance_count", "is_member", "cell_name"]
+        read_only_fields = ["id", "created_at", "name", "status", "membership_status", "attendance_count", "is_member", "cell_name"]
+
+    def get_name(self, obj):
+        return obj.full_name
 
     def get_membership_status(self, obj):
-        profile = getattr(obj, "member_profile", None)
-        if not profile:
-            return MemberProfile.MembershipStatus.VISITOR
-        return profile.membership_status
+        return derived_person_status(obj)
+
+    def get_status(self, obj):
+        return self.get_membership_status(obj)
 
     def get_attendance_count(self, obj):
-        profile = getattr(obj, "member_profile", None)
-        if not profile:
-            return 0
-        return profile.attendance_count
+        return attendance_total(obj)
 
     def get_is_member(self, obj):
         return self.get_membership_status(obj) == MemberProfile.MembershipStatus.MEMBER
@@ -398,3 +407,12 @@ class PersonSerializer(serializers.ModelSerializer):
         if not profile or not profile.cell_id:
             return None
         return profile.cell.name
+
+
+class FirstTimerEventSerializer(serializers.ModelSerializer):
+    person = PersonSerializer(read_only=True)
+
+    class Meta:
+        model = FirstTimerEvent
+        fields = ["id", "person", "event_type", "event_date", "handled", "created_at"]
+        read_only_fields = ["id", "person", "event_type", "event_date", "created_at"]
