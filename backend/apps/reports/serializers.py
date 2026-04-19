@@ -256,6 +256,13 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         error_text = str(exc).lower()
         return "uniq_report_per_cell_per_date" in error_text
 
+    @staticmethod
+    def _apply_attendance_deltas(*, added_ids, removed_ids):
+        for person in Person.objects.filter(id__in=added_ids):
+            evaluate_membership(person, attendance_delta=1)
+        for person in Person.objects.filter(id__in=removed_ids):
+            evaluate_membership(person, attendance_delta=-1)
+
     def validate(self, attrs):
         request = self.context["request"]
         user = request.user
@@ -392,6 +399,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         )
 
         if rejected_report:
+            previous_attendee_ids = set(rejected_report.attendees.values_list("id", flat=True))
             rejected_report.service = validated_data.get("service")
             rejected_report.report_type = validated_data.get("report_type", CellReport.infer_report_type(meeting_date))
             rejected_report.meeting_time = validated_data.get("meeting_time")
@@ -437,8 +445,11 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 attendee_person_ids=attendee_person_ids,
             )
             self._sync_cell_memberships(people=attendees, cell=cell)
-            for person in attendees:
-                evaluate_membership(person)
+            current_attendee_ids = set(attendee_person_ids)
+            self._apply_attendance_deltas(
+                added_ids=current_attendee_ids - previous_attendee_ids,
+                removed_ids=previous_attendee_ids - current_attendee_ids,
+            )
 
             rejected_report.images.all().delete()
             ReportImage.objects.bulk_create([ReportImage(report=rejected_report, image=img) for img in images])
@@ -463,8 +474,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             attendee_person_ids=attendee_person_ids,
         )
         self._sync_cell_memberships(people=attendees, cell=cell)
-        for person in attendees:
-            evaluate_membership(person)
+        self._apply_attendance_deltas(added_ids=set(attendee_person_ids), removed_ids=set())
 
         ReportImage.objects.bulk_create([ReportImage(report=report, image=img) for img in images])
         return report
@@ -492,6 +502,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             raise
 
         if attendees is not None:
+            previous_attendee_ids = set(instance.attendees.values_list("id", flat=True))
             attendees = list(attendees) + self._resolve_new_attendees(new_attendees)
             attendees = list({person.id: person for person in attendees}.values())
             instance.attendees.set(attendees)
@@ -505,8 +516,12 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         instance.sync_attendance_count(save=True)
         self._update_last_attended(meeting_date=instance.meeting_date, attendee_person_ids=attendee_person_ids)
         self._sync_cell_memberships(people=instance.attendees.all(), cell=instance.cell)
-        for person in instance.attendees.all():
-            evaluate_membership(person)
+        if attendees is not None:
+            current_attendee_ids = set(attendee_person_ids)
+            self._apply_attendance_deltas(
+                added_ids=current_attendee_ids - previous_attendee_ids,
+                removed_ids=previous_attendee_ids - current_attendee_ids,
+            )
 
         if images:
             ReportImage.objects.bulk_create([ReportImage(report=instance, image=img) for img in images])
