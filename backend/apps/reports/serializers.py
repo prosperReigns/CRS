@@ -26,10 +26,11 @@ class ReportUserSerializer(serializers.ModelSerializer):
 
 class ReportAttendeeSerializer(serializers.ModelSerializer):
     membership_status = serializers.CharField(source="member_profile.membership_status", read_only=True)
+    cell_name = serializers.CharField(source="member_profile.cell.name", read_only=True)
 
     class Meta:
         model = Person
-        fields = ["id", "first_name", "last_name", "phone", "email", "membership_status"]
+        fields = ["id", "first_name", "last_name", "phone", "email", "membership_status", "cell_name"]
 
 
 class ReportCommentSerializer(serializers.ModelSerializer):
