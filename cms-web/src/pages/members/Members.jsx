@@ -39,6 +39,8 @@ const membershipBadgeClassMap = {
   regular: "bg-blue-100 text-blue-700",
 };
 const MEMBERSHIP_THRESHOLD = 4;
+const getDisplayName = (member) =>
+  [member.user?.first_name, member.user?.last_name].filter(Boolean).join(" ") || member.user?.username || "-";
 
 function Members() {
   const [members, setMembers] = useState([]);
@@ -72,7 +74,13 @@ function Members() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-slate-900">Members</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-2xl font-bold text-slate-900">Members</h2>
+        <p className="text-sm font-medium text-slate-600">
+          Member count: {filteredMembers.length}
+          {membershipFilter !== "all" ? ` of ${members.length}` : ""}
+        </p>
+      </div>
       <select
         value={membershipFilter}
         onChange={(event) => setMembershipFilter(event.target.value)}
@@ -92,10 +100,7 @@ function Members() {
           to={`/members/${m.id}`}
           className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
         >
-          <p className="text-lg font-semibold text-slate-900">{m.user?.username}</p>
-          <p className="text-sm text-slate-600">
-            Name: {[m.user?.first_name, m.user?.last_name].filter(Boolean).join(" ") || "-"}
-          </p>
+          <p className="text-lg font-semibold text-slate-900">{getDisplayName(m)}</p>
           <div className="mt-1">
             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${roleBadgeClassMap[m.user?.role] || roleBadgeClassMap.member}`}>
               {roleLabelMap[m.user?.role] || "Member"}
