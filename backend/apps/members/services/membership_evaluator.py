@@ -23,7 +23,7 @@ def _normalize_username_seed(person):
     seed = slugify(person.full_name).replace("-", "_")
     if seed:
         return seed
-    return f"member_{person.id or get_random_string(4).lower()}"
+    return f"member_{person.id or get_random_string(8).lower()}"
 
 
 def _unique_username(seed):
@@ -32,6 +32,10 @@ def _unique_username(seed):
     index = 0
     while User.objects.filter(username=candidate).exists():
         index += 1
+        if index > 1000:
+            candidate = f"{base[: max(1, MAX_USERNAME_LENGTH - 9)]}_{get_random_string(8).lower()}"
+            if not User.objects.filter(username=candidate).exists():
+                return candidate
         suffix = f"_{index}"
         candidate = f"{base[: max(1, MAX_USERNAME_LENGTH - len(suffix))]}{suffix}"
     return candidate
