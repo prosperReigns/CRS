@@ -22,6 +22,23 @@ export const getStaffResponsibilities = async (): Promise<StaffResponsibility[]>
   }
 };
 
+export interface CreateStaffResponsibilityPayload {
+  name: string;
+  code: string;
+  description?: string;
+}
+
+export const createStaffResponsibility = async (
+  payload: CreateStaffResponsibilityPayload
+): Promise<StaffResponsibility> => {
+  try {
+    const response = await API.post<StaffResponsibility>("accounts/staff-responsibilities/", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to create staff responsibility."));
+  }
+};
+
 export interface CreateUserPayload {
   username: string;
   first_name?: string;
