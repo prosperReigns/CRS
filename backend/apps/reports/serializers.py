@@ -216,8 +216,12 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 lookup = Person.objects.filter(phone=phone).first()
             if lookup is None and email:
                 lookup = Person.objects.filter(email__iexact=email).first()
-            if lookup is None:
-                lookup = Person.objects.filter(first_name__iexact=first_name, last_name__iexact=last_name).first()
+            if lookup is None and first_name and last_name:
+                name_matches = list(
+                    Person.objects.filter(first_name__iexact=first_name, last_name__iexact=last_name)[:2]
+                )
+                if len(name_matches) == 1:
+                    lookup = name_matches[0]
             if lookup is None:
                 lookup = Person.objects.create(
                     first_name=first_name,

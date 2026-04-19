@@ -39,7 +39,7 @@ const membershipBadgeClassMap = {
   regular: "bg-blue-100 text-blue-700",
 };
 const MEMBERSHIP_THRESHOLD = 4;
-const TRACKED_ATTENDANCE_ROLES = new Set(["member", "teacher", "staff", "pastor", "admin"]);
+const LEADERSHIP_ROLES = new Set(["cell_leader", "fellowship_leader"]);
 
 function Members() {
   const [members, setMembers] = useState([]);
@@ -112,9 +112,9 @@ function Members() {
           <p className="text-sm text-slate-600">Cell: {m.cell_name || "-"}</p>
           <p className="text-sm text-slate-600">
             Attendance Progress:{" "}
-            {TRACKED_ATTENDANCE_ROLES.has(m.user?.role)
-              ? `${Math.min(m.attendance_count ?? 0, MEMBERSHIP_THRESHOLD)} / ${MEMBERSHIP_THRESHOLD}`
-              : "Not tracked for leaders"}
+            {LEADERSHIP_ROLES.has(m.user?.role)
+              ? "Not tracked for leaders"
+              : `${Math.min(m.attendance_count ?? 0, MEMBERSHIP_THRESHOLD)} / ${MEMBERSHIP_THRESHOLD}`}
           </p>
           <p className="text-sm text-slate-600">Baptised: {m.is_baptised ? "Yes" : "No"}</p>
           <p className="text-sm text-slate-600">Foundation: {m.foundation_completed ? "Yes" : "No"}</p>

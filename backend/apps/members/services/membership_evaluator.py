@@ -6,8 +6,11 @@ from django.utils.text import slugify
 from apps.reports.models import CellReport
 from ..models import Attendance, MemberProfile, Person
 
+User = get_user_model()
 ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP = 4
-LEADERSHIP_ROLES = {"cell_leader", "fellowship_leader"}
+MAX_USERNAME_LENGTH = 150
+USERNAME_SEED_LIMIT = 24
+LEADERSHIP_ROLES = {User.Role.CELL_LEADER, User.Role.FELLOWSHIP_LEADER}
 MEMBERSHIP_PRIORITY = {
     MemberProfile.MembershipStatus.VISITOR: 0,
     MemberProfile.MembershipStatus.FIRST_TIMER: 1,
@@ -24,19 +27,17 @@ def _normalize_username_seed(person):
 
 
 def _unique_username(seed):
-    User = get_user_model()
-    base = seed[:24] or "member"
+    base = seed[:USERNAME_SEED_LIMIT] or "member"
     candidate = base
     index = 0
     while User.objects.filter(username=candidate).exists():
         index += 1
         suffix = f"_{index}"
-        candidate = f"{base[: max(1, 150 - len(suffix))]}{suffix}"
+        candidate = f"{base[: max(1, MAX_USERNAME_LENGTH - len(suffix))]}{suffix}"
     return candidate
 
 
 def _create_member_profile_for_person(person, attendance_count):
-    User = get_user_model()
     username = _unique_username(_normalize_username_seed(person))
     user = User.objects.create_user(
         username=username,
