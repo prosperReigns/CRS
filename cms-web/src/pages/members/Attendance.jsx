@@ -3,18 +3,7 @@ import { getPeople, getServices, markAttendance } from "../../api/members";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
-
-const badgeStyle = {
-  member: "bg-emerald-100 text-emerald-700",
-  first_timer: "bg-amber-100 text-amber-700",
-  visitor: "bg-slate-100 text-slate-700",
-};
-
-const badgeLabel = {
-  member: "Member",
-  first_timer: "First Timer",
-  visitor: "Visitor",
-};
+import { resolvePersonStatus, statusBadgeClass, statusLabel } from "../../utils/memberStatus";
 
 function Attendance() {
   const [people, setPeople] = useState([]);
@@ -122,12 +111,8 @@ function Attendance() {
             />
             {`${person.first_name} ${person.last_name}`.trim()}
             </span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                badgeStyle[person.status || person.membership_status] || "bg-slate-100 text-slate-700"
-              }`}
-            >
-              {badgeLabel[person.status || person.membership_status] || "Visitor"}
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass[resolvePersonStatus(person)]}`}>
+              {statusLabel[resolvePersonStatus(person)]}
             </span>
           </label>
         </div>

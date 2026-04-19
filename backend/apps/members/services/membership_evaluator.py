@@ -4,12 +4,11 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 
 from ..models import MemberProfile, Person
-from .first_timer_events import attendance_total, derived_person_status
+from .first_timer_events import ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP, attendance_total, derived_person_status
 
 User = get_user_model()
 
 
-ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP = 4
 MAX_USERNAME_LENGTH = 150
 USERNAME_SEED_LIMIT = 24
 LEADERSHIP_ROLES = {User.Role.CELL_LEADER, User.Role.FELLOWSHIP_LEADER}

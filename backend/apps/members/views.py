@@ -26,6 +26,7 @@ from .serializers import (
     VisitationReportSerializer,
 )
 from .services import ensure_first_timer_event
+from .services.first_timer_events import ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP
 
 
 def scoped_member_profiles(user):
@@ -362,11 +363,13 @@ class PersonViewSet(viewsets.ModelViewSet):
         status_filter = self.request.query_params.get("membership_status") or self.request.query_params.get("status")
         if status_filter:
             if status_filter == MemberProfile.MembershipStatus.MEMBER:
-                qs = qs.filter(member_profile__attendance_count__gte=4)
+                qs = qs.filter(member_profile__attendance_count__gte=ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP)
             elif status_filter == MemberProfile.MembershipStatus.FIRST_TIMER:
                 qs = qs.filter(first_timer_events__handled=False).distinct()
             elif status_filter == MemberProfile.MembershipStatus.VISITOR:
-                qs = qs.exclude(member_profile__attendance_count__gte=4).exclude(first_timer_events__handled=False)
+                qs = qs.exclude(member_profile__attendance_count__gte=ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP).exclude(
+                    first_timer_events__handled=False
+                )
         return qs
 
 
@@ -412,9 +415,6 @@ class FirstTimerEventViewSet(viewsets.ModelViewSet):
         if user.role == User.Role.FELLOWSHIP_LEADER and event.person.cell_reports.filter(
             cell__fellowship__leader=user
         ).exists():
-            serializer.save()
-            return
-        if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
             serializer.save()
             return
         raise PermissionDenied("You are not allowed to update this first timer event.")

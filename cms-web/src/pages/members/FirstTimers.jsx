@@ -3,12 +3,7 @@ import { getServiceFirstTimerEvents, updateFirstTimerEvent } from "../../api/mem
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
-
-const statusBadge = {
-  member: "bg-emerald-100 text-emerald-700",
-  first_timer: "bg-amber-100 text-amber-700",
-  visitor: "bg-slate-100 text-slate-700",
-};
+import { resolvePersonStatus, statusBadgeClass, statusLabel } from "../../utils/memberStatus";
 
 function FirstTimers() {
   const [events, setEvents] = useState([]);
@@ -57,15 +52,9 @@ function FirstTimers() {
             <div className="flex items-center justify-between gap-2">
               <p className="text-lg font-semibold text-slate-900">{event.person?.name || "-"}</p>
               <span
-                className={`rounded-full px-2 py-1 text-xs font-medium ${
-                  statusBadge[event.person?.status] || "bg-slate-100 text-slate-700"
-                }`}
+                className={`rounded-full px-2 py-1 text-xs font-medium ${statusBadgeClass[resolvePersonStatus(event.person)]}`}
               >
-                {event.person?.status === "member"
-                  ? "Member"
-                  : event.person?.status === "first_timer"
-                    ? "First Timer"
-                    : "Visitor"}
+                {statusLabel[resolvePersonStatus(event.person)]}
               </span>
             </div>
             <p className="text-sm text-slate-600">Date: {event.event_date}</p>

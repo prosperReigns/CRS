@@ -2,6 +2,8 @@ from apps.reports.models import CellReport
 
 from ..models import Attendance, FirstTimerEvent, MemberProfile, Person
 
+ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP = 4
+
 
 def attendance_total(person):
     if not isinstance(person, Person):
@@ -30,7 +32,7 @@ def has_unhandled_first_timer_event(person):
 
 def derived_person_status(person):
     total = attendance_total(person)
-    if total >= 4:
+    if total >= ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP:
         return MemberProfile.MembershipStatus.MEMBER
     if has_unhandled_first_timer_event(person):
         return MemberProfile.MembershipStatus.FIRST_TIMER
