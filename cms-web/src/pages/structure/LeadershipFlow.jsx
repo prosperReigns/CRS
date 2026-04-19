@@ -54,7 +54,7 @@ function CredentialsModal({ credentials, onClose }) {
         <button
           type="button"
           onClick={onClose}
-          className="mt-5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          className="mt-5 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
         >
           Close
         </button>
@@ -452,7 +452,7 @@ function LeadershipFlow() {
             <button
               type="submit"
               disabled={isFormSubmitting}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+              className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
             >
               {isFormSubmitting ? "Saving..." : "Create Staff"}
             </button>
@@ -560,7 +560,7 @@ function LeadershipFlow() {
                 <button
                   type="submit"
                   disabled={isFormSubmitting}
-                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                  className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
                 >
                   Create Cell
                 </button>
@@ -605,7 +605,7 @@ function LeadershipFlow() {
               <button
                 type="submit"
                 disabled={isFormSubmitting}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
                 Assign Fellowship Leader
               </button>
@@ -685,7 +685,7 @@ function LeadershipFlow() {
               <button
                 type="submit"
                 disabled={isFormSubmitting}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
                 Create Leader
               </button>
@@ -729,7 +729,7 @@ function LeadershipFlow() {
               <button
                 type="submit"
                 disabled={isFormSubmitting}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
                 Assign Cell Leader
               </button>
@@ -783,7 +783,7 @@ function LeadershipFlow() {
               <button
                 type="submit"
                 disabled={isFormSubmitting}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
                 Create Cell Leader
               </button>
