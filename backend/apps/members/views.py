@@ -195,9 +195,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         person = serializer.validated_data.get("person")
         if person and not scoped_people(self.request.user).filter(id=person.id).exists():
             raise PermissionDenied("You cannot record attendance for this person.")
-        record = serializer.save(recorded_by=self.request.user)
-        if record.person_id:
-            evaluate_membership(record.person)
+        serializer.save(recorded_by=self.request.user)
 
     @action(detail=False, methods=["post"], url_path="bulk-mark")
     @transaction.atomic
@@ -255,18 +253,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     output_field=DateField(),
                 )
             )
-            profiles_by_person_id = {
-                profile.person_id: profile for profile in MemberProfile.objects.filter(person_id__in=to_create_ids)
-            }
             for person in Person.objects.filter(id__in=to_create_ids):
-                profile = profiles_by_person_id.get(person.id)
-                if profile and profile.membership_status == MemberProfile.MembershipStatus.VISITOR:
-                    profile.membership_status = MemberProfile.MembershipStatus.FIRST_TIMER
-                    profile.is_first_timer = True
-                    if not profile.first_visit_date:
-                        profile.first_visit_date = date
-                    profile.save(update_fields=["membership_status", "is_first_timer", "first_visit_date", "updated_at"])
-                evaluate_membership(person)
+                evaluate_membership(person, attendance_delta=1)
 
         return Response(
             {
