@@ -1,15 +1,58 @@
+from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.utils.crypto import get_random_string
+from django.utils.text import slugify
 
 from apps.reports.models import CellReport
 from ..models import Attendance, MemberProfile, Person
 
 ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP = 4
+LEADERSHIP_ROLES = {"cell_leader", "fellowship_leader"}
 MEMBERSHIP_PRIORITY = {
     MemberProfile.MembershipStatus.VISITOR: 0,
     MemberProfile.MembershipStatus.FIRST_TIMER: 1,
     MemberProfile.MembershipStatus.REGULAR: 2,
     MemberProfile.MembershipStatus.MEMBER: 3,
 }
+
+
+def _normalize_username_seed(person):
+    seed = slugify(person.full_name).replace("-", "_")
+    if seed:
+        return seed
+    return f"member_{person.id or get_random_string(4).lower()}"
+
+
+def _unique_username(seed):
+    User = get_user_model()
+    base = seed[:24] or "member"
+    candidate = base
+    index = 0
+    while User.objects.filter(username=candidate).exists():
+        index += 1
+        suffix = f"_{index}"
+        candidate = f"{base[: max(1, 150 - len(suffix))]}{suffix}"
+    return candidate
+
+
+def _create_member_profile_for_person(person, attendance_count):
+    User = get_user_model()
+    username = _unique_username(_normalize_username_seed(person))
+    user = User.objects.create_user(
+        username=username,
+        first_name=person.first_name,
+        last_name=person.last_name,
+        email=person.email,
+        role=User.Role.MEMBER,
+    )
+    active_membership = person.cell_memberships.filter(is_active=True).select_related("cell").first()
+    return MemberProfile.objects.create(
+        person=person,
+        user=user,
+        cell=getattr(active_membership, "cell", None),
+        membership_status=MemberProfile.MembershipStatus.MEMBER,
+        attendance_count=max(0, attendance_count),
+    )
 
 
 def _attendance_total_from_db(person):
@@ -24,7 +67,22 @@ def evaluate_membership(person, *, attendance_delta=0, recalculate_attendance=Fa
 
     profile = MemberProfile.objects.filter(person=person).first()
     if profile is None:
-        return None
+        attendance_total = _attendance_total_from_db(person)
+        if attendance_total < ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP:
+            return None
+        return _create_member_profile_for_person(person, attendance_total)
+
+    if profile.user.role in LEADERSHIP_ROLES:
+        updates = []
+        if profile.membership_status != MemberProfile.MembershipStatus.MEMBER:
+            profile.membership_status = MemberProfile.MembershipStatus.MEMBER
+            updates.append("membership_status")
+        if profile.is_first_timer:
+            profile.is_first_timer = False
+            updates.append("is_first_timer")
+        if updates:
+            profile.save(update_fields=[*updates, "updated_at"])
+        return profile
 
     if recalculate_attendance:
         profile.attendance_count = _attendance_total_from_db(person)

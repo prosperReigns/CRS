@@ -217,6 +217,8 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             if lookup is None and email:
                 lookup = Person.objects.filter(email__iexact=email).first()
             if lookup is None:
+                lookup = Person.objects.filter(first_name__iexact=first_name, last_name__iexact=last_name).first()
+            if lookup is None:
                 lookup = Person.objects.create(
                     first_name=first_name,
                     last_name=last_name,
@@ -269,6 +271,17 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             evaluate_membership(person, attendance_delta=1)
         for person in Person.objects.filter(id__in=removed_ids):
             evaluate_membership(person, attendance_delta=-1)
+
+    @staticmethod
+    def _infer_first_timer_ids(*, attendee_ids, exclude_report_id=None):
+        attendee_ids = set(attendee_ids)
+        if not attendee_ids:
+            return set()
+        previous_reports = CellReport.objects.filter(attendees__in=attendee_ids)
+        if exclude_report_id:
+            previous_reports = previous_reports.exclude(pk=exclude_report_id)
+        seen_ids = set(previous_reports.values_list("attendees", flat=True))
+        return attendee_ids - seen_ids
 
     def validate(self, attrs):
         request = self.context["request"]
@@ -443,10 +456,18 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 ]
             )
 
-            rejected_report.attendees.set(attendees)
-            rejected_report.first_timer_attendees.set(first_timer_attendees)
-            rejected_report.sync_attendance_count(save=True)
             attendee_person_ids = [attendee.id for attendee in attendees]
+            inferred_first_timer_ids = self._infer_first_timer_ids(
+                attendee_ids=attendee_person_ids,
+                exclude_report_id=rejected_report.pk,
+            )
+            requested_first_timer_ids = {attendee.id for attendee in first_timer_attendees}
+            final_first_timer_ids = requested_first_timer_ids | inferred_first_timer_ids
+            first_timer_people = [attendee for attendee in attendees if attendee.id in final_first_timer_ids]
+
+            rejected_report.attendees.set(attendees)
+            rejected_report.first_timer_attendees.set(first_timer_people)
+            rejected_report.sync_attendance_count(save=True)
             self._update_last_attended(
                 meeting_date=rejected_report.meeting_date,
                 attendee_person_ids=attendee_person_ids,
@@ -471,11 +492,16 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                 ) from exc
             raise
 
+        attendee_person_ids = [attendee.id for attendee in attendees]
+        inferred_first_timer_ids = self._infer_first_timer_ids(attendee_ids=attendee_person_ids)
+        requested_first_timer_ids = {attendee.id for attendee in first_timer_attendees}
+        final_first_timer_ids = requested_first_timer_ids | inferred_first_timer_ids
+        first_timer_people = [attendee for attendee in attendees if attendee.id in final_first_timer_ids]
+
         if attendees:
             report.attendees.set(attendees)
-        report.first_timer_attendees.set(first_timer_attendees)
+        report.first_timer_attendees.set(first_timer_people)
         report.sync_attendance_count(save=True)
-        attendee_person_ids = [attendee.id for attendee in attendees]
         self._update_last_attended(
             meeting_date=report.meeting_date,
             attendee_person_ids=attendee_person_ids,
@@ -517,8 +543,17 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         else:
             attendee_person_ids = list(instance.attendees.values_list("id", flat=True))
 
+        inferred_first_timer_ids = self._infer_first_timer_ids(
+            attendee_ids=attendee_person_ids,
+            exclude_report_id=instance.pk,
+        )
         if first_timer_attendees is not None:
-            instance.first_timer_attendees.set(first_timer_attendees)
+            requested_first_timer_ids = {attendee.id for attendee in first_timer_attendees}
+        else:
+            requested_first_timer_ids = set(instance.first_timer_attendees.values_list("id", flat=True))
+        final_first_timer_ids = requested_first_timer_ids | inferred_first_timer_ids
+        current_attendees = list(instance.attendees.all())
+        instance.first_timer_attendees.set([attendee for attendee in current_attendees if attendee.id in final_first_timer_ids])
 
         instance.sync_attendance_count(save=True)
         self._update_last_attended(meeting_date=instance.meeting_date, attendee_person_ids=attendee_person_ids)
