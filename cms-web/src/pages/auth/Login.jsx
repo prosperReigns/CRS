@@ -20,7 +20,7 @@ function Login() {
       case "staff":
         return hasAnyStaffResponsibility(currentUser) ? "/dashboard" : "/settings";
       case "fellowship_leader":
-        return "/settings";
+        return "/reports/manage";
       case "cell_leader":
         return "/reports/submit";
       case "teacher":

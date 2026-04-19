@@ -26,10 +26,17 @@ class ReportUserSerializer(serializers.ModelSerializer):
 
 class ReportAttendeeSerializer(serializers.ModelSerializer):
     membership_status = serializers.CharField(source="member_profile.membership_status", read_only=True)
+    cell_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Person
-        fields = ["id", "first_name", "last_name", "phone", "email", "membership_status"]
+        fields = ["id", "first_name", "last_name", "phone", "email", "membership_status", "cell_name"]
+
+    def get_cell_name(self, obj):
+        profile = getattr(obj, "member_profile", None)
+        if not profile or not profile.cell:
+            return None
+        return profile.cell.name
 
 
 class ReportCommentSerializer(serializers.ModelSerializer):

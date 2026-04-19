@@ -91,7 +91,10 @@ function ReportDetail({ report, refresh }) {
         <strong>Attendees:</strong>{" "}
         {report.attendees?.length
           ? report.attendees
-              .map((attendee) => `${attendee.first_name || ""} ${attendee.last_name || ""}`.trim())
+              .map((attendee) => {
+                const attendeeName = `${attendee.first_name || ""} ${attendee.last_name || ""}`.trim();
+                return attendee.cell_name ? `${attendeeName} (${attendee.cell_name})` : attendeeName;
+              })
               .join(", ")
           : "None"}
         </p>
@@ -99,7 +102,10 @@ function ReportDetail({ report, refresh }) {
           <strong>First Timers:</strong>{" "}
           {report.first_timer_attendees?.length
             ? report.first_timer_attendees
-                .map((attendee) => `${attendee.first_name || ""} ${attendee.last_name || ""}`.trim())
+                .map((attendee) => {
+                  const attendeeName = `${attendee.first_name || ""} ${attendee.last_name || ""}`.trim();
+                  return attendee.cell_name ? `${attendeeName} (${attendee.cell_name})` : attendeeName;
+                })
                 .join(", ")
             : "-"}
         </p>

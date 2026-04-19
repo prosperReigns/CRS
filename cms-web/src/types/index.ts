@@ -154,6 +154,7 @@ export interface ReportAttendee {
   phone: string;
   email: string;
   membership_status?: "visitor" | "first_timer" | "regular" | "member";
+  cell_name?: string | null;
 }
 
 export interface Attendance {
