@@ -24,6 +24,16 @@ def ensure_member_profile(sender, instance, created, **kwargs):
             )
             profile.person = person
             profile.save(update_fields=["person", "updated_at"])
+        if instance.role in {User.Role.CELL_LEADER, User.Role.FELLOWSHIP_LEADER}:
+            updates = []
+            if profile.membership_status != MemberProfile.MembershipStatus.MEMBER:
+                profile.membership_status = MemberProfile.MembershipStatus.MEMBER
+                updates.append("membership_status")
+            if profile.is_first_timer:
+                profile.is_first_timer = False
+                updates.append("is_first_timer")
+            if updates:
+                profile.save(update_fields=[*updates, "updated_at"])
 
 
 @receiver(post_save, sender=Attendance)
