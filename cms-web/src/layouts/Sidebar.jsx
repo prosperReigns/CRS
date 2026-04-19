@@ -90,7 +90,7 @@ function Sidebar({ isOpen, onToggle }) {
         <div className="space-y-1">
           {canManageStructure && (
             <NavLink className={navClassName} to="/structure">
-              Structure Flow
+              Structure
             </NavLink>
           )}
           <NavLink className={navClassName} to="/members">

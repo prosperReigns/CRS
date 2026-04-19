@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { getMembers } from "../../api/members";
 import { createCell, createFellowship, getCells, getFellowships } from "../../api/structure";
@@ -24,6 +24,7 @@ const meetingDays = [
   { value: "saturday", label: "Saturday" },
   { value: "sunday", label: "Sunday" },
 ];
+const MIN_PASSWORD_LENGTH = 8;
 
 const toResponsibilityCode = (value) =>
   value
@@ -31,6 +32,8 @@ const toResponsibilityCode = (value) =>
     .trim()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+
+const getMemberDisplayName = (member) => member.user?.username || `No username (ID: ${member.id})`;
 
 function CredentialsModal({ credentials, onClose }) {
   if (!credentials) return null;
@@ -51,7 +54,7 @@ function CredentialsModal({ credentials, onClose }) {
         <button
           type="button"
           onClick={onClose}
-          className="mt-5 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          className="mt-5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
         >
           Close
         </button>
@@ -121,7 +124,7 @@ function LeadershipFlow() {
     cell_id: "",
   });
   const [credentials, setCredentials] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
 
   const fellowshipLeaders = useMemo(
     () => users.filter((candidate) => candidate.role === "fellowship_leader"),
@@ -129,7 +132,7 @@ function LeadershipFlow() {
   );
   const cellLeaders = useMemo(() => users.filter((candidate) => candidate.role === "cell_leader"), [users]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -148,19 +151,19 @@ function LeadershipFlow() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [canManageStaff]);
 
   useEffect(() => {
     fetchData();
-  }, [canManageStaff]);
+  }, [fetchData]);
 
   const beginSubmit = () => {
     setActionError("");
     setSuccess("");
-    setSubmitting(true);
+    setIsFormSubmitting(true);
   };
 
-  const endSubmit = () => setSubmitting(false);
+  const endSubmit = () => setIsFormSubmitting(false);
 
   const handleFellowshipCreate = async (event) => {
     event.preventDefault();
@@ -216,9 +219,15 @@ function LeadershipFlow() {
       let assignedResponsibilityCode = staffForm.responsibility;
       const responsibilityName = staffForm.new_responsibility_name.trim();
       if (responsibilityName) {
+        const customCode = staffForm.new_responsibility_code.trim();
+        const generatedCode = toResponsibilityCode(responsibilityName);
+        const responsibilityCode = customCode || generatedCode;
+        if (!responsibilityCode) {
+          throw new Error("Enter a valid responsibility code or name.");
+        }
         const created = await createStaffResponsibility({
           name: responsibilityName,
-          code: toResponsibilityCode(staffForm.new_responsibility_code || responsibilityName),
+          code: responsibilityCode,
           description: staffForm.new_responsibility_description.trim(),
         });
         assignedResponsibilityCode = created.code;
@@ -407,7 +416,7 @@ function LeadershipFlow() {
               value={staffForm.password}
               onChange={(event) => setStaffForm((prev) => ({ ...prev, password: event.target.value }))}
               placeholder="Temporary password"
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
               required
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
@@ -445,10 +454,10 @@ function LeadershipFlow() {
             />
             <button
               type="submit"
-              disabled={submitting}
-              className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+              disabled={isFormSubmitting}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
             >
-              {submitting ? "Saving..." : "Create Staff"}
+              {isFormSubmitting ? "Saving..." : "Create Staff"}
             </button>
           </form>
         </section>
@@ -482,8 +491,8 @@ function LeadershipFlow() {
                 </select>
                 <button
                   type="submit"
-                  disabled={submitting}
-                  className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                  disabled={isFormSubmitting}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
                 >
                   Create Fellowship
                 </button>
@@ -553,8 +562,8 @@ function LeadershipFlow() {
                 />
                 <button
                   type="submit"
-                  disabled={submitting}
-                  className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                  disabled={isFormSubmitting}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
                 >
                   Create Cell
                 </button>
@@ -579,7 +588,7 @@ function LeadershipFlow() {
                 <option value="">Select member</option>
                 {members.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.user?.username || `No username (ID: ${member.id})`}
+                    {getMemberDisplayName(member)}
                   </option>
                 ))}
               </select>
@@ -598,8 +607,8 @@ function LeadershipFlow() {
               </select>
               <button
                 type="submit"
-                disabled={submitting}
-                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                disabled={isFormSubmitting}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
                 Assign Fellowship Leader
               </button>
@@ -678,8 +687,8 @@ function LeadershipFlow() {
               <p className="text-xs text-slate-500">A temporary password is generated automatically.</p>
               <button
                 type="submit"
-                disabled={submitting}
-                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                disabled={isFormSubmitting}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
                 Create Leader
               </button>
@@ -703,7 +712,7 @@ function LeadershipFlow() {
                 <option value="">Select member</option>
                 {members.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.user?.username || `No username (ID: ${member.id})`}
+                    {getMemberDisplayName(member)}
                   </option>
                 ))}
               </select>
@@ -722,8 +731,8 @@ function LeadershipFlow() {
               </select>
               <button
                 type="submit"
-                disabled={submitting}
-                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                disabled={isFormSubmitting}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
                 Assign Cell Leader
               </button>
@@ -776,8 +785,8 @@ function LeadershipFlow() {
               <p className="text-xs text-slate-500">A temporary password is generated automatically.</p>
               <button
                 type="submit"
-                disabled={submitting}
-                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
+                disabled={isFormSubmitting}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
               >
                 Create Cell Leader
               </button>
