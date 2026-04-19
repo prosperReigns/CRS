@@ -57,6 +57,7 @@ export interface Person {
   membership_status: "visitor" | "first_timer" | "regular" | "member";
   attendance_count: number;
   is_member: boolean;
+  cell_name?: string | null;
 }
 
 export interface VisitationReport {

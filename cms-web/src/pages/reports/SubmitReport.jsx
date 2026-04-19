@@ -311,6 +311,7 @@ function SubmitReport() {
               />
               <span className="truncate">
                 {`${person.first_name} ${person.last_name}`.trim()} - {statusLabel[person.membership_status] || "Visitor"}
+                {person.cell_name ? ` (${person.cell_name})` : ""}
               </span>
             </label>
             <label className="flex items-center gap-1 text-xs text-slate-600">

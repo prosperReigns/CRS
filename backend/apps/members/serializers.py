@@ -342,6 +342,7 @@ class PersonSerializer(serializers.ModelSerializer):
     membership_status = serializers.SerializerMethodField(read_only=True)
     attendance_count = serializers.SerializerMethodField(read_only=True)
     is_member = serializers.SerializerMethodField(read_only=True)
+    cell_name = serializers.CharField(source="member_profile.cell.name", read_only=True, allow_null=True)
 
     class Meta:
         model = Person
@@ -355,8 +356,9 @@ class PersonSerializer(serializers.ModelSerializer):
             "membership_status",
             "attendance_count",
             "is_member",
+            "cell_name",
         ]
-        read_only_fields = ["id", "created_at", "membership_status", "attendance_count", "is_member"]
+        read_only_fields = ["id", "created_at", "membership_status", "attendance_count", "is_member", "cell_name"]
 
     def get_membership_status(self, obj):
         profile = getattr(obj, "member_profile", None)

@@ -44,10 +44,16 @@ def scoped_people(user):
         return qs
     profile_person_ids = scoped_member_profiles(user).exclude(person__isnull=True).values_list("person_id", flat=True)
     if user.role == User.Role.FELLOWSHIP_LEADER:
-        report_person_ids = Person.objects.filter(cell_reports__cell__fellowship__leader=user).values_list("id", flat=True)
+        report_person_ids = Person.objects.filter(
+            cell_reports__cell__fellowship__leader=user,
+            member_profile__isnull=True,
+        ).values_list("id", flat=True)
         return qs.filter(Q(id__in=profile_person_ids) | Q(id__in=report_person_ids)).distinct()
     if user.role == User.Role.CELL_LEADER:
-        report_person_ids = Person.objects.filter(cell_reports__cell__leader=user).values_list("id", flat=True)
+        report_person_ids = Person.objects.filter(
+            cell_reports__cell__leader=user,
+            member_profile__isnull=True,
+        ).values_list("id", flat=True)
         return qs.filter(Q(id__in=profile_person_ids) | Q(id__in=report_person_ids)).distinct()
     return qs.filter(id__in=profile_person_ids)
 
