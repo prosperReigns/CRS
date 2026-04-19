@@ -14,8 +14,6 @@ function Sidebar({ isOpen, onToggle }) {
   const canViewSettings = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageMembers = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const canManageStructure = ["admin", "pastor", "fellowship_leader"].includes(user.role) || canAccessCellMinistry(user);
-  const canAssignCellLeaders = ["admin", "pastor"].includes(user.role) || user.role === "fellowship_leader" || canAccessCellMinistry(user);
-  const canAssignFellowshipLeaders = ["admin", "pastor"].includes(user.role) || canAccessCellMinistry(user);
   const canMessage = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
     user.role
   );
@@ -92,22 +90,12 @@ function Sidebar({ isOpen, onToggle }) {
         <div className="space-y-1">
           {canManageStructure && (
             <NavLink className={navClassName} to="/structure">
-              Structure
+              Structure Flow
             </NavLink>
           )}
           <NavLink className={navClassName} to="/members">
             Members
           </NavLink>
-          {canAssignCellLeaders && (
-            <NavLink className={navClassName} to="/members/assign-cell-leader">
-              Assign Cell Leader
-            </NavLink>
-          )}
-          {canAssignFellowshipLeaders && (
-            <NavLink className={navClassName} to="/members/assign-fellowship-leader">
-              Assign Fellowship Leader
-            </NavLink>
-          )}
           <NavLink className={navClassName} to="/attendance">
             Attendance
           </NavLink>

@@ -10,20 +10,16 @@ import MyReports from "./pages/reports/MyReports";
 import Members from "./pages/members/Members";
 import MemberProfile from "./pages/members/MemberProfile";
 import Attendance from "./pages/members/Attendance";
-import AssignCellLeader from "./pages/members/AssignCellLeader";
 import Partnership from "./pages/members/Partnership";
 import Visitation from "./pages/members/Visitation";
 import VisitationReporting from "./pages/members/VisitationReporting";
 import Messaging from "./pages/messaging/Messaging";
-import Structure from "./pages/structure/Structure";
-import AssignFellowshipLeader from "./pages/structure/AssignFellowshipLeader";
+import LeadershipFlow from "./pages/structure/LeadershipFlow";
 import Settings from "./pages/settings/Settings";
 
 const memberManagerRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"];
 const messagingRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
 const structureRoles = ["admin", "pastor", "staff", "fellowship_leader"];
-const fellowshipLeaderAssignmentRoles = ["admin", "pastor", "staff"];
-const cellLeaderAssignmentRoles = ["admin", "pastor", "staff", "fellowship_leader"];
 const settingsRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"];
 
 function ProtectedLayoutRoute({ allowedRoles, allowedResponsibilities, children }) {
@@ -112,26 +108,8 @@ function App() {
           }
         />
 
-        <Route
-          path="/members/assign-cell-leader"
-          element={
-            <ProtectedLayoutRoute allowedRoles={cellLeaderAssignmentRoles} allowedResponsibilities={["cell_ministry"]}>
-              <AssignCellLeader />
-            </ProtectedLayoutRoute>
-          }
-        />
-
-        <Route
-          path="/members/assign-fellowship-leader"
-          element={
-            <ProtectedLayoutRoute
-              allowedRoles={fellowshipLeaderAssignmentRoles}
-              allowedResponsibilities={["cell_ministry"]}
-            >
-              <AssignFellowshipLeader />
-            </ProtectedLayoutRoute>
-          }
-        />
+        <Route path="/members/assign-cell-leader" element={<Navigate to="/structure" replace />} />
+        <Route path="/members/assign-fellowship-leader" element={<Navigate to="/structure" replace />} />
 
         <Route
           path="/attendance"
@@ -146,7 +124,7 @@ function App() {
           path="/structure"
           element={
             <ProtectedLayoutRoute allowedRoles={structureRoles} allowedResponsibilities={["cell_ministry"]}>
-              <Structure />
+              <LeadershipFlow />
             </ProtectedLayoutRoute>
           }
         />
