@@ -53,13 +53,24 @@ export interface Person {
   id: number;
   first_name: string;
   last_name: string;
+  name?: string;
   phone: string;
   email: string;
   created_at: string;
+  status?: "visitor" | "first_timer" | "regular" | "member";
   membership_status: "visitor" | "first_timer" | "regular" | "member";
   attendance_count: number;
   is_member: boolean;
   cell_name?: string | null;
+}
+
+export interface FirstTimerEvent {
+  id: number;
+  person: Person;
+  event_type: "cell" | "service";
+  event_date: string;
+  handled: boolean;
+  created_at: string;
 }
 
 export interface VisitationReport {

@@ -10,13 +10,14 @@ from rest_framework.views import APIView
 
 from apps.accounts.models import User
 from apps.accounts.responsibilities import has_staff_permission
-from .models import Attendance, ChurchService, MemberProfile, Person, SoulWinning, VisitationReport
+from .models import Attendance, ChurchService, FirstTimerEvent, MemberProfile, Person, SoulWinning, VisitationReport
 from .permissions import AttendancePermission, MemberProfilePermission, SoulWinningPermission
 from .services import evaluate_membership
 from .serializers import (
     AttendanceSerializer,
     BulkAttendanceSerializer,
     ChurchServiceSerializer,
+    FirstTimerEventSerializer,
     FirstTimerFollowUpSerializer,
     MemberProfileSerializer,
     PersonSerializer,
@@ -24,6 +25,8 @@ from .serializers import (
     SoulWinningSerializer,
     VisitationReportSerializer,
 )
+from .services import ensure_first_timer_event
+from .services.first_timer_events import ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP
 
 
 def scoped_member_profiles(user):
@@ -251,6 +254,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         Attendance.objects.bulk_create(records)
 
         if present and to_create_ids:
+            for person in Person.objects.filter(id__in=to_create_ids):
+                ensure_first_timer_event(
+                    person=person,
+                    event_type=FirstTimerEvent.EventType.SERVICE,
+                    event_date=date,
+                )
             MemberProfile.objects.filter(person_id__in=to_create_ids).update(
                 last_attended=Case(
                     When(last_attended__isnull=True, then=Value(date)),
@@ -351,7 +360,61 @@ class PersonViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = scoped_people(self.request.user)
-        status_filter = self.request.query_params.get("membership_status")
+        status_filter = self.request.query_params.get("membership_status") or self.request.query_params.get("status")
         if status_filter:
-            qs = qs.filter(member_profile__membership_status=status_filter)
+            if status_filter == MemberProfile.MembershipStatus.MEMBER:
+                qs = qs.filter(member_profile__attendance_count__gte=ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP)
+            elif status_filter == MemberProfile.MembershipStatus.FIRST_TIMER:
+                qs = qs.filter(first_timer_events__handled=False).distinct()
+            elif status_filter == MemberProfile.MembershipStatus.VISITOR:
+                qs = qs.exclude(member_profile__attendance_count__gte=ATTENDANCE_THRESHOLD_FOR_MEMBERSHIP).exclude(
+                    first_timer_events__handled=False
+                )
         return qs
+
+
+class FirstTimerEventViewSet(viewsets.ModelViewSet):
+    serializer_class = FirstTimerEventSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = FirstTimerEvent.objects.select_related("person", "person__member_profile", "person__member_profile__cell")
+        event_type = self.request.query_params.get("event_type")
+        if event_type in {FirstTimerEvent.EventType.CELL, FirstTimerEvent.EventType.SERVICE}:
+            qs = qs.filter(event_type=event_type)
+
+        if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
+            return qs
+        if user.role == User.Role.STAFF and has_staff_permission(user, "view_new_members"):
+            return qs.filter(event_type=FirstTimerEvent.EventType.SERVICE)
+        if user.role == User.Role.CELL_LEADER:
+            return qs.filter(event_type=FirstTimerEvent.EventType.CELL, person__cell_reports__cell__leader=user).distinct()
+        if user.role == User.Role.FELLOWSHIP_LEADER:
+            return qs.filter(
+                event_type=FirstTimerEvent.EventType.CELL,
+                person__cell_reports__cell__fellowship__leader=user,
+            ).distinct()
+        return qs.none()
+
+    def perform_update(self, serializer):
+        event = self.get_object()
+        user = self.request.user
+        if event.event_type == FirstTimerEvent.EventType.SERVICE:
+            if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
+                serializer.save()
+                return
+            if user.role == User.Role.STAFF and has_staff_permission(user, "update_visitation"):
+                serializer.save()
+                return
+            raise PermissionDenied("Only first-timer staff, pastors, or admins can update service first timer events.")
+        if user.role == User.Role.CELL_LEADER and event.person.cell_reports.filter(cell__leader=user).exists():
+            serializer.save()
+            return
+        if user.role == User.Role.FELLOWSHIP_LEADER and event.person.cell_reports.filter(
+            cell__fellowship__leader=user
+        ).exists():
+            serializer.save()
+            return
+        raise PermissionDenied("You are not allowed to update this first timer event.")

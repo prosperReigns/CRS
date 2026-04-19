@@ -1,5 +1,13 @@
 import API, { getErrorMessage } from "./client";
-import type { AttendanceBulkRequest, AttendanceBulkResponse, ChurchService, Member, Person, VisitationReport } from "../types";
+import type {
+  AttendanceBulkRequest,
+  AttendanceBulkResponse,
+  ChurchService,
+  FirstTimerEvent,
+  Member,
+  Person,
+  VisitationReport,
+} from "../types";
 import { toList } from "./utils";
 
 export const getMembers = async (): Promise<Member[]> => {
@@ -110,6 +118,30 @@ export const getFirstTimers = async (): Promise<Member[]> => {
     return toList(response.data);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to fetch first timers."));
+  }
+};
+
+export const getServiceFirstTimerEvents = async (): Promise<FirstTimerEvent[]> => {
+  try {
+    const response = await API.get<FirstTimerEvent[] | { results: FirstTimerEvent[] }>(
+      "members/first-timer-events/",
+      { params: { event_type: "service" } }
+    );
+    return toList(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch first timer events."));
+  }
+};
+
+export const updateFirstTimerEvent = async (
+  eventId: number,
+  data: Partial<Pick<FirstTimerEvent, "handled">>
+): Promise<FirstTimerEvent> => {
+  try {
+    const response = await API.patch<FirstTimerEvent>(`members/first-timer-events/${eventId}/`, data);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update first timer event."));
   }
 };
 

@@ -3,6 +3,7 @@ import { getPeople, getServices, markAttendance } from "../../api/members";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
+import { resolvePersonStatus, statusBadgeClass, statusLabel } from "../../utils/memberStatus";
 
 function Attendance() {
   const [people, setPeople] = useState([]);
@@ -100,14 +101,19 @@ function Attendance() {
       <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-2 xl:grid-cols-3">
       {people.map((person) => (
         <div key={person.id} className="rounded-md bg-white p-2">
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center justify-between gap-2 text-sm text-slate-700">
+            <span className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={selected.includes(person.id)}
               onChange={() => toggleMember(person.id)}
               className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
             />
-            {`${person.first_name} ${person.last_name}`.trim()} ({person.membership_status})
+            {`${person.first_name} ${person.last_name}`.trim()}
+            </span>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass[resolvePersonStatus(person)]}`}>
+              {statusLabel[resolvePersonStatus(person)]}
+            </span>
           </label>
         </div>
       ))}

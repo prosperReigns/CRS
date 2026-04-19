@@ -3,13 +3,7 @@ import { createReport } from "../../api/reports";
 import { createPerson, getMembers, getPeople } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
 import { inferReportTypeFromDate, REPORT_TYPE_OPTIONS } from "./reportType";
-
-const statusLabel = {
-  visitor: "Visitor",
-  first_timer: "First Timer",
-  regular: "Regular",
-  member: "Member",
-};
+import { resolvePersonStatus, statusBadgeClass, statusLabel } from "../../utils/memberStatus";
 
 function SubmitReport() {
   const { user } = useContext(AuthContext);
@@ -279,7 +273,6 @@ function SubmitReport() {
           <option value="member">Members</option>
           <option value="visitor">Visitors</option>
           <option value="first_timer">First Timers</option>
-          <option value="regular">Regular Attenders</option>
         </select>
       </div>
 
@@ -318,10 +311,13 @@ function SubmitReport() {
                 className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
               />
               <span className="truncate">
-                {`${person.first_name} ${person.last_name}`.trim()} - {statusLabel[person.membership_status] || "Visitor"}
+                {`${person.first_name} ${person.last_name}`.trim()} - {statusLabel[resolvePersonStatus(person)]}
                 {person.cell_name ? ` (${person.cell_name})` : ""}
               </span>
             </label>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass[resolvePersonStatus(person)]}`}>
+              {statusLabel[resolvePersonStatus(person)]}
+            </span>
             <label className="flex items-center gap-1 text-xs text-slate-600">
               <input
                 type="checkbox"
