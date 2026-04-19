@@ -66,6 +66,7 @@ const resolveProfilePicture = (picture) => {
 };
 
 const MEMBERSHIP_THRESHOLD = 4;
+const LEADERSHIP_ROLES = new Set(["cell_leader", "fellowship_leader"]);
 
 function Members() {
   const [members, setMembers] = useState([]);

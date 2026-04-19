@@ -3,7 +3,7 @@ export interface User {
   username: string;
   first_name: string | null;
   last_name: string | null;
-  gender?: "male" | "female" | "other" | "prefer_not_to_say" | "" | null;
+  gender?: string | null;
   email: string | null;
   phone: string | null;
   home_address?: string | null;
