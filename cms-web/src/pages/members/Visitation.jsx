@@ -133,6 +133,7 @@ function Visitation() {
       setMembers((prev) => [
         {
           ...createdMember,
+          user: createdMember.user || createdUser,
           visitation_fellowship_leader: createdMember.visitation_fellowship_leader ?? null,
           visitation_cell_leader: createdMember.visitation_cell_leader ?? null,
         },
