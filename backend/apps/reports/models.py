@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.members.models import ChurchService
-from apps.members.models import MemberProfile
+from apps.members.models import Person
 from apps.structure.models import Cell
 
 User = settings.AUTH_USER_MODEL
@@ -33,8 +33,8 @@ class CellReport(models.Model):
         default=ReportType.WEEK1_PRAYER_AND_PLANNING,
     )
     service = models.ForeignKey(ChurchService, null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
-    attendees = models.ManyToManyField(MemberProfile, related_name="cell_reports")
-    first_timer_attendees = models.ManyToManyField(MemberProfile, related_name="first_timer_reports", blank=True)
+    attendees = models.ManyToManyField(Person, related_name="cell_reports")
+    first_timer_attendees = models.ManyToManyField(Person, related_name="first_timer_reports", blank=True)
     attendance_count = models.PositiveIntegerField(default=0)
     attendee_names = models.TextField(blank=True)
     new_members = models.PositiveIntegerField(default=0)

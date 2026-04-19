@@ -1,5 +1,5 @@
 import API, { getErrorMessage } from "./client";
-import type { AttendanceBulkRequest, AttendanceBulkResponse, ChurchService, Member, VisitationReport } from "../types";
+import type { AttendanceBulkRequest, AttendanceBulkResponse, ChurchService, Member, Person, VisitationReport } from "../types";
 import { toList } from "./utils";
 
 export const getMembers = async (): Promise<Member[]> => {
@@ -20,6 +20,25 @@ export const getMemberProfile = async (memberId: number): Promise<Member> => {
   }
 };
 
+export interface CreateMemberProfilePayload {
+  user_id: number;
+  cell?: number | null;
+  membership_status?: "visitor" | "first_timer" | "regular" | "member";
+  is_first_timer?: boolean;
+  first_visit_date?: string | null;
+  follow_up_status?: string;
+  visitation_notes?: string;
+}
+
+export const createMemberProfile = async (payload: CreateMemberProfilePayload): Promise<Member> => {
+  try {
+    const response = await API.post<Member>("members/profiles/", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to create member profile."));
+  }
+};
+
 export const updateMemberProfile = async (
   memberId: number,
   data: Partial<Pick<Member, "is_baptised" | "foundation_completed" | "souls_won">>
@@ -37,12 +56,12 @@ export const markAttendance = async (data: AttendanceBulkRequest): Promise<Atten
     const payload: {
       date: string;
       service_id: number;
-      members: number[];
+      people: number[];
       present?: boolean;
     } = {
       date: data.date,
       service_id: data.service_id,
-      members: data.members || [],
+      people: data.people || data.members || [],
     };
     if (typeof data.present === "boolean") {
       payload.present = data.present;
@@ -51,6 +70,28 @@ export const markAttendance = async (data: AttendanceBulkRequest): Promise<Atten
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to mark attendance."));
+  }
+};
+
+export const getPeople = async (params?: {
+  membership_status?: "visitor" | "first_timer" | "regular" | "member";
+}): Promise<Person[]> => {
+  try {
+    const response = await API.get<Person[] | { results: Person[] }>("members/people/", { params });
+    return toList(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch people."));
+  }
+};
+
+export const createPerson = async (
+  payload: Pick<Person, "first_name" | "last_name" | "phone" | "email">
+): Promise<Person> => {
+  try {
+    const response = await API.post<Person>("members/people/", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to create person."));
   }
 };
 

@@ -1,10 +1,13 @@
+import json
+
 from django.db import IntegrityError, transaction
-from django.db.models import Case, DateField, F, Value, When
+from django.db.models import Case, Count, DateField, F, Value, When
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from apps.accounts.models import User
-from apps.members.models import MemberProfile
+from apps.members.models import MemberProfile, Person
+from apps.members.services import ensure_cell_membership, evaluate_membership
 from .models import CellReport, ReportActivityLog, ReportComment, ReportImage
 
 
@@ -22,12 +25,11 @@ class ReportUserSerializer(serializers.ModelSerializer):
 
 
 class ReportAttendeeSerializer(serializers.ModelSerializer):
-    user = ReportUserSerializer(read_only=True)
-    cell_name = serializers.CharField(source="cell.name", read_only=True)
+    membership_status = serializers.CharField(source="member_profile.membership_status", read_only=True)
 
     class Meta:
-        model = MemberProfile
-        fields = ["id", "user", "cell", "cell_name"]
+        model = Person
+        fields = ["id", "first_name", "last_name", "phone", "email", "membership_status"]
 
 
 class ReportCommentSerializer(serializers.ModelSerializer):
@@ -120,11 +122,16 @@ class CellReportSerializer(serializers.ModelSerializer):
 
 
 class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
-    attendees = serializers.PrimaryKeyRelatedField(queryset=MemberProfile.objects.select_related("cell"), many=True)
+    attendees = serializers.PrimaryKeyRelatedField(queryset=Person.objects.all(), many=True)
     first_timer_attendees = serializers.PrimaryKeyRelatedField(
-        queryset=MemberProfile.objects.select_related("cell"),
+        queryset=Person.objects.all(),
         many=True,
         required=False,
+    )
+    new_attendees = serializers.ListField(
+        child=serializers.DictField(),
+        required=False,
+        write_only=True,
     )
     images = serializers.ListField(
         child=serializers.ImageField(),
@@ -144,6 +151,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             "service",
             "attendees",
             "first_timer_attendees",
+            "new_attendees",
             "attendee_names",
             "new_members",
             "offering_amount",
@@ -173,10 +181,10 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         return unique_images
 
     @staticmethod
-    def _update_last_attended(*, meeting_date, attendee_ids):
-        if not attendee_ids:
+    def _update_last_attended(*, meeting_date, attendee_person_ids):
+        if not attendee_person_ids:
             return
-        MemberProfile.objects.filter(id__in=attendee_ids).update(
+        MemberProfile.objects.filter(person_id__in=attendee_person_ids).update(
             last_attended=Case(
                 When(last_attended__isnull=True, then=Value(meeting_date)),
                 When(last_attended__lt=meeting_date, then=Value(meeting_date)),
@@ -186,20 +194,56 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         )
 
     @staticmethod
-    def _sync_first_timer_profiles(*, meeting_date, first_timer_ids):
-        if not first_timer_ids:
+    def _resolve_new_attendees(new_attendees):
+        people = []
+        for entry in new_attendees:
+            first_name = (entry.get("first_name") or "").strip()
+            if not first_name:
+                continue
+            last_name = (entry.get("last_name") or "").strip()
+            phone = (entry.get("phone") or "").strip()
+            email = (entry.get("email") or "").strip()
+
+            lookup = None
+            if phone:
+                lookup = Person.objects.filter(phone=phone).first()
+            if lookup is None and email:
+                lookup = Person.objects.filter(email__iexact=email).first()
+            if lookup is None:
+                lookup = Person.objects.create(
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone=phone,
+                    email=email,
+                )
+            people.append(lookup)
+        return people
+
+    @staticmethod
+    def _sync_cell_memberships(*, people, cell):
+        people = list(people)
+        if not people:
             return
-        # Keep the earliest known first visit date to support correcting records
-        # when a first-timer is identified from an earlier report submission.
-        MemberProfile.objects.filter(id__in=first_timer_ids).update(
-            is_first_timer=True,
-            first_visit_date=Case(
-                When(first_visit_date__isnull=True, then=Value(meeting_date)),
-                When(first_visit_date__gt=meeting_date, then=Value(meeting_date)),
-                default=F("first_visit_date"),
-                output_field=DateField(),
-            ),
-        )
+
+        person_by_id = {person.id: person for person in people}
+        person_ids = list(person_by_id.keys())
+        profile_cell_by_person_id = {
+            person_id: cell_id
+            for person_id, cell_id in MemberProfile.objects.filter(person_id__in=person_ids).values_list("person_id", "cell_id")
+        }
+        attendance_counts = {
+            row["attendees"]: row["total"]
+            for row in CellReport.objects.filter(cell=cell, attendees__in=person_ids)
+            .values("attendees")
+            .annotate(total=Count("id"))
+        }
+
+        for person_id, person in person_by_id.items():
+            if profile_cell_by_person_id.get(person_id) == cell.id:
+                ensure_cell_membership(person, cell)
+                continue
+            if attendance_counts.get(person_id, 0) >= 3:
+                ensure_cell_membership(person, cell)
 
     @staticmethod
     def _is_duplicate_report_error(exc):
@@ -218,6 +262,13 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         cell = attrs.get("cell") or getattr(self.instance, "cell", None)
         attendees = attrs.get("attendees")
         first_timer_attendees = attrs.get("first_timer_attendees")
+        new_attendees = attrs.get("new_attendees", [])
+        if isinstance(new_attendees, str):
+            try:
+                new_attendees = json.loads(new_attendees)
+            except json.JSONDecodeError as exc:
+                raise serializers.ValidationError({"new_attendees": f"Invalid new attendee payload: {exc.msg}."}) from exc
+            attrs["new_attendees"] = new_attendees
         meeting_date = attrs.get("meeting_date") or getattr(self.instance, "meeting_date", None)
         extracted_images = self._extract_images()
         if extracted_images and "images" not in attrs:
@@ -248,28 +299,41 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
 
         if attendees is None:
             if self.instance is None:
-                raise serializers.ValidationError({"attendees": "At least one attendee is required."})
-            attendees = list(self.instance.attendees.all())
-        if len(attendees) < 1:
+                if not new_attendees:
+                    raise serializers.ValidationError({"attendees": "At least one attendee is required."})
+                attendees = []
+            else:
+                attendees = list(self.instance.attendees.all())
+        if len(attendees) < 1 and len(new_attendees) < 1:
             raise serializers.ValidationError({"attendees": "At least one attendee is required."})
 
         attendee_ids = list({attendee.id for attendee in attendees})
-        valid_attendee_ids = set(MemberProfile.objects.filter(id__in=attendee_ids, cell=cell).values_list("id", flat=True))
-        invalid_attendee_ids = sorted(set(attendee_ids) - valid_attendee_ids)
+        active_cell_memberships = (
+            MemberProfile.objects.filter(person_id__in=attendee_ids)
+            .exclude(cell__isnull=True)
+            .exclude(cell=cell)
+            .values_list("person_id", flat=True)
+        )
+        invalid_attendee_ids = sorted(set(active_cell_memberships))
         if invalid_attendee_ids:
             raise serializers.ValidationError(
-                {"attendees": f"All attendees must belong to the selected cell. Invalid IDs: {invalid_attendee_ids}"}
+                {
+                    "attendees": (
+                        "Selected attendees are active in another cell. "
+                        f"Invalid person IDs: {invalid_attendee_ids}"
+                    )
+                }
             )
 
         if first_timer_attendees is None:
             first_timer_attendees = []
         first_timer_ids = list({attendee.id for attendee in first_timer_attendees})
-        invalid_first_timer_ids = sorted(set(first_timer_ids) - valid_attendee_ids)
+        invalid_first_timer_ids = sorted(set(first_timer_ids) - set(attendee_ids))
         if invalid_first_timer_ids:
             raise serializers.ValidationError(
                 {
                     "first_timer_attendees": (
-                        "First timer attendees must be selected from attendees in the selected cell. "
+                        "First timer attendees must be selected from attendees list. "
                         f"Invalid IDs: {invalid_first_timer_ids}"
                     )
                 }
@@ -311,11 +375,15 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         images = validated_data.pop("images", [])
-        attendees = validated_data.pop("attendees", [])
+        attendees = list(validated_data.pop("attendees", []))
         first_timer_attendees = validated_data.pop("first_timer_attendees", [])
+        new_attendees = validated_data.pop("new_attendees", [])
         request = self.context["request"]
         cell = validated_data["cell"]
         meeting_date = validated_data["meeting_date"]
+
+        attendees.extend(self._resolve_new_attendees(new_attendees))
+        attendees = list({person.id: person for person in attendees}.values())
 
         rejected_report = (
             CellReport.objects.select_for_update()
@@ -363,14 +431,14 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             rejected_report.attendees.set(attendees)
             rejected_report.first_timer_attendees.set(first_timer_attendees)
             rejected_report.sync_attendance_count(save=True)
+            attendee_person_ids = [attendee.id for attendee in attendees]
             self._update_last_attended(
                 meeting_date=rejected_report.meeting_date,
-                attendee_ids=[attendee.id for attendee in attendees],
+                attendee_person_ids=attendee_person_ids,
             )
-            self._sync_first_timer_profiles(
-                meeting_date=rejected_report.meeting_date,
-                first_timer_ids=[attendee.id for attendee in first_timer_attendees],
-            )
+            self._sync_cell_memberships(people=attendees, cell=cell)
+            for person in attendees:
+                evaluate_membership(person)
 
             rejected_report.images.all().delete()
             ReportImage.objects.bulk_create([ReportImage(report=rejected_report, image=img) for img in images])
@@ -389,14 +457,14 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             report.attendees.set(attendees)
         report.first_timer_attendees.set(first_timer_attendees)
         report.sync_attendance_count(save=True)
+        attendee_person_ids = [attendee.id for attendee in attendees]
         self._update_last_attended(
             meeting_date=report.meeting_date,
-            attendee_ids=[attendee.id for attendee in attendees],
+            attendee_person_ids=attendee_person_ids,
         )
-        self._sync_first_timer_profiles(
-            meeting_date=report.meeting_date,
-            first_timer_ids=[attendee.id for attendee in first_timer_attendees],
-        )
+        self._sync_cell_memberships(people=attendees, cell=cell)
+        for person in attendees:
+            evaluate_membership(person)
 
         ReportImage.objects.bulk_create([ReportImage(report=report, image=img) for img in images])
         return report
@@ -406,6 +474,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
         images = validated_data.pop("images", None)
         attendees = validated_data.pop("attendees", None)
         first_timer_attendees = validated_data.pop("first_timer_attendees", None)
+        new_attendees = validated_data.pop("new_attendees", [])
 
         if "cell" in validated_data:
             validated_data["leader"] = validated_data["cell"].leader
@@ -423,25 +492,27 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             raise
 
         if attendees is not None:
+            attendees = list(attendees) + self._resolve_new_attendees(new_attendees)
+            attendees = list({person.id: person for person in attendees}.values())
             instance.attendees.set(attendees)
-            attendee_ids = [attendee.id for attendee in attendees]
+            attendee_person_ids = [attendee.id for attendee in attendees]
         else:
-            attendee_ids = list(instance.attendees.values_list("id", flat=True))
+            attendee_person_ids = list(instance.attendees.values_list("id", flat=True))
 
         if first_timer_attendees is not None:
             instance.first_timer_attendees.set(first_timer_attendees)
-            self._sync_first_timer_profiles(
-                meeting_date=instance.meeting_date,
-                first_timer_ids=[attendee.id for attendee in first_timer_attendees],
-            )
 
         instance.sync_attendance_count(save=True)
-        self._update_last_attended(meeting_date=instance.meeting_date, attendee_ids=attendee_ids)
+        self._update_last_attended(meeting_date=instance.meeting_date, attendee_person_ids=attendee_person_ids)
+        self._sync_cell_memberships(people=instance.attendees.all(), cell=instance.cell)
+        for person in instance.attendees.all():
+            evaluate_membership(person)
 
         if images:
             ReportImage.objects.bulk_create([ReportImage(report=instance, image=img) for img in images])
 
         return instance
+
 
 
 class ReportCommentCreateSerializer(serializers.Serializer):

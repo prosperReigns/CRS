@@ -41,16 +41,16 @@ function Dashboard({ title = "Dashboard" }) {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h4 className="text-sm font-medium text-slate-500">Total Members</h4>
-          <p className="mt-2 text-3xl font-bold text-slate-900">{data.members.total}</p>
+          <h4 className="text-sm font-medium text-slate-500">Membership Strength</h4>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{data.membership?.strength ?? data.members.total}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h4 className="text-sm font-medium text-slate-500">Active Members</h4>
-          <p className="mt-2 text-3xl font-bold text-emerald-600">{data.members.active}</p>
+          <h4 className="text-sm font-medium text-slate-500">Visitors</h4>
+          <p className="mt-2 text-3xl font-bold text-amber-600">{data.membership?.visitors ?? 0}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h4 className="text-sm font-medium text-slate-500">Inactive Members</h4>
-          <p className="mt-2 text-3xl font-bold text-amber-600">{data.members.inactive}</p>
+          <h4 className="text-sm font-medium text-slate-500">First Timers</h4>
+          <p className="mt-2 text-3xl font-bold text-emerald-600">{data.membership?.first_timers ?? 0}</p>
         </div>
       </div>
 
@@ -60,8 +60,8 @@ function Dashboard({ title = "Dashboard" }) {
           <p className="mt-2 text-3xl font-bold text-brand-600">₦{data.offering_total}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h4 className="text-sm font-medium text-slate-500">Souls Won</h4>
-          <p className="mt-2 text-3xl font-bold text-slate-900">{data.souls_won}</p>
+          <h4 className="text-sm font-medium text-slate-500">Membership Growth Rate</h4>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{data.membership?.growth_rate ?? 0}%</p>
         </div>
       </div>
 
@@ -141,7 +141,8 @@ function Dashboard({ title = "Dashboard" }) {
             <div className="space-y-2">
               {data.top_cells.map((cell) => (
                 <p key={cell.cell_id} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                  {cell.cell_name} - Attendance: {cell.total_attendance}, Offering: ₦{cell.total_offering}
+                  {cell.cell_name} - Members: {cell.member_count ?? 0}, Visitors: {cell.visitor_count ?? 0}, First Timers:{" "}
+                  {cell.first_timer_count ?? 0}
                 </p>
               ))}
             </div>

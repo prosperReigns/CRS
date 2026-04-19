@@ -1,7 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { changePassword, getUserSettings, updateUserSettings } from "../../api/settings";
-import { createUser, getStaffResponsibilities } from "../../api/users";
 import LoadingState from "../../components/ui/LoadingState";
 import ErrorState from "../../components/ui/ErrorState";
 
@@ -33,20 +32,6 @@ function Settings() {
     new_password: "",
     confirm_password: "",
   });
-  const [responsibilities, setResponsibilities] = useState([]);
-  const [staffForm, setStaffForm] = useState({
-    username: "",
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    password: "",
-    responsibility: "",
-  });
-  const [staffSuccess, setStaffSuccess] = useState("");
-  const [staffError, setStaffError] = useState("");
-  const [creatingStaff, setCreatingStaff] = useState(false);
-  const canManageStaff = ["pastor", "admin"].includes(user?.role);
   const shouldShowCellNameField = useMemo(
     () => ["cell_leader", "fellowship_leader"].includes(user?.role) || Boolean(form.cell_name),
     [form.cell_name, user?.role]
@@ -81,13 +66,6 @@ function Settings() {
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
-
-  useEffect(() => {
-    if (!canManageStaff) return;
-    getStaffResponsibilities()
-      .then((data) => setResponsibilities(data))
-      .catch((err) => setStaffError(err.message || "Failed to load staff responsibilities."));
-  }, [canManageStaff]);
 
   const handleProfileSubmit = async (event) => {
     event.preventDefault();
@@ -153,39 +131,6 @@ function Settings() {
       setPasswordError(err.message || "Failed to update password.");
     } finally {
       setSavingPassword(false);
-    }
-  };
-
-  const handleCreateStaff = async (event) => {
-    event.preventDefault();
-    setStaffError("");
-    setStaffSuccess("");
-    setCreatingStaff(true);
-    try {
-      await createUser({
-        username: staffForm.username.trim(),
-        first_name: staffForm.first_name.trim(),
-        last_name: staffForm.last_name.trim(),
-        email: staffForm.email.trim(),
-        phone: staffForm.phone.trim(),
-        password: staffForm.password,
-        role: "staff",
-        responsibilities: staffForm.responsibility ? [staffForm.responsibility] : [],
-      });
-      setStaffSuccess("Staff account created successfully.");
-      setStaffForm({
-        username: "",
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        password: "",
-        responsibility: "",
-      });
-    } catch (err) {
-      setStaffError(err.message || "Failed to create staff account.");
-    } finally {
-      setCreatingStaff(false);
     }
   };
 
@@ -281,83 +226,6 @@ function Settings() {
           {saving ? "Saving..." : "Save Settings"}
         </button>
       </form>
-
-      {canManageStaff && (
-        <form onSubmit={handleCreateStaff} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Create Staff</h3>
-          {staffError && <ErrorState error={staffError} />}
-          {staffSuccess && (
-            <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{staffSuccess}</p>
-          )}
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <input
-              value={staffForm.first_name}
-              onChange={(event) => setStaffForm((prev) => ({ ...prev, first_name: event.target.value }))}
-              placeholder="First name"
-              required
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-            <input
-              value={staffForm.last_name}
-              onChange={(event) => setStaffForm((prev) => ({ ...prev, last_name: event.target.value }))}
-              placeholder="Last name"
-              required
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-          </div>
-
-          <input
-            value={staffForm.username}
-            onChange={(event) => setStaffForm((prev) => ({ ...prev, username: event.target.value }))}
-            placeholder="Username"
-            required
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <input
-            type="email"
-            value={staffForm.email}
-            onChange={(event) => setStaffForm((prev) => ({ ...prev, email: event.target.value }))}
-            placeholder="Email"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <input
-            value={staffForm.phone}
-            onChange={(event) => setStaffForm((prev) => ({ ...prev, phone: event.target.value }))}
-            placeholder="Phone"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <input
-            type="password"
-            value={staffForm.password}
-            onChange={(event) => setStaffForm((prev) => ({ ...prev, password: event.target.value }))}
-            placeholder="Temporary password"
-            minLength={MIN_PASSWORD_LENGTH}
-            required
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <select
-            value={staffForm.responsibility}
-            onChange={(event) => setStaffForm((prev) => ({ ...prev, responsibility: event.target.value }))}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">No responsibility</option>
-            {responsibilities.map((responsibility) => (
-              <option key={responsibility.id} value={responsibility.code}>
-                {responsibility.name}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="submit"
-            disabled={creatingStaff}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-70"
-          >
-            {creatingStaff ? "Creating..." : "Create Staff"}
-          </button>
-        </form>
-      )}
 
       <form onSubmit={handlePasswordSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">Change Password</h3>
