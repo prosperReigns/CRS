@@ -38,8 +38,6 @@ const membershipBadgeClassMap = {
   visitor: "bg-slate-200 text-slate-700",
   regular: "bg-blue-100 text-blue-700",
 };
-const MEMBERSHIP_THRESHOLD = 4;
-
 function Members() {
   const [members, setMembers] = useState([]);
   const [membershipFilter, setMembershipFilter] = useState("all");
@@ -92,9 +90,47 @@ function Members() {
             to={`/members/${m.id}`}
             className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
           >
-            <p className="text-lg font-semibold text-slate-900">
-              {m.user?.username}
-            </p>
+            {(() => {
+              const fullName =
+                [m.user?.first_name, m.user?.last_name].filter(Boolean).join(" ") ||
+                m.user?.username ||
+                "-";
+              const initials = fullName.slice(0, 1).toUpperCase();
+              const role = m.user?.role;
+              const topLines = [fullName];
+              if (role === "fellowship_leader") {
+                topLines.push(`Cell: ${m.cell_name || "-"}`);
+              }
+              if (role === "pastor" || role === "staff") {
+                topLines.push(`Fellowship: ${m.fellowship_name || "-"}`);
+                topLines.push(`Cell: ${m.cell_name || "-"}`);
+              }
+              return (
+                <div className="mb-3 flex items-start gap-3">
+                  <div className="h-12 w-12 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                    {m.user?.profile_picture ? (
+                      <img
+                        src={m.user.profile_picture}
+                        alt={`${fullName} profile`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">
+                        {initials}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {topLines.map((line) => (
+                      <p key={line} className="truncate text-base font-bold text-slate-900">
+                        {line}
+                      </p>
+                    ))}
+                    <p className="text-sm text-slate-600">Gender: {m.user?.gender || "-"}</p>
+                  </div>
+                </div>
+              );
+            })()}
             <p className="text-sm text-slate-600">
               Name:{" "}
               {[m.user?.first_name, m.user?.last_name]
@@ -125,11 +161,6 @@ function Members() {
                   : "Inactive"}
             </p>
             <p className="text-sm text-slate-600">Cell: {m.cell_name || "-"}</p>
-            <p className="text-sm text-slate-600">
-              Attendance Progress:{" "}
-              {Math.min(m.attendance_count ?? 0, MEMBERSHIP_THRESHOLD)} /{" "}
-              {MEMBERSHIP_THRESHOLD}
-            </p>
             <p className="text-sm text-slate-600">
               Baptised: {m.is_baptised ? "Yes" : "No"}
             </p>
