@@ -353,6 +353,10 @@ class PersonViewSet(viewsets.ModelViewSet):
         qs = scoped_people(self.request.user)
         cell_id = self.request.query_params.get("cell")
         if cell_id:
+            try:
+                cell_id = int(cell_id)
+            except (TypeError, ValueError):
+                raise ValidationError({"cell": "Invalid cell filter."})
             qs = qs.filter(
                 Q(member_profile__cell_id=cell_id)
                 | Q(cell_memberships__cell_id=cell_id, cell_memberships__is_active=True)

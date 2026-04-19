@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createReport } from "../../api/reports";
 import { createPerson, getMembers, getPeople } from "../../api/members";
 import { AuthContext } from "../../context/AuthContext";
@@ -35,25 +35,32 @@ function SubmitReport() {
   const [addingPerson, setAddingPerson] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const peopleRequestRef = useRef(0);
+
+  const loadPeopleForCell = async (cellValue) => {
+    const requestId = ++peopleRequestRef.current;
+    try {
+      const scopedPeople = await getPeople(cellValue ? { cell: Number(cellValue) } : undefined);
+      if (requestId === peopleRequestRef.current) {
+        setPeople(scopedPeople);
+      }
+    } catch (err) {
+      if (requestId === peopleRequestRef.current) {
+        setError(err.message || "Failed to load people.");
+      }
+    }
+  };
 
   useEffect(() => {
     getMembers()
       .then((memberData) => {
         setMembers(memberData);
         const defaultCellId = memberData.find((member) => member.cell)?.cell;
-        if (defaultCellId) {
-          setForm((prev) => (prev.cell ? prev : { ...prev, cell: String(defaultCellId) }));
-        }
+        if (defaultCellId) setForm((prev) => (prev.cell ? prev : { ...prev, cell: String(defaultCellId) }));
+        return loadPeopleForCell(defaultCellId ? String(defaultCellId) : "");
       })
       .catch((err) => setError(err.message || "Failed to load people."));
   }, []);
-
-  useEffect(() => {
-    const selectedCellId = form.cell ? Number(form.cell) : undefined;
-    getPeople(selectedCellId ? { cell: selectedCellId } : undefined)
-      .then((peopleData) => setPeople(peopleData))
-      .catch((err) => setError(err.message || "Failed to load people."));
-  }, [form.cell]);
 
   useEffect(() => {
     const urls = images.map((img) => URL.createObjectURL(img));
@@ -217,10 +224,12 @@ function SubmitReport() {
         <select
           className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
           value={form.cell}
-          onChange={(e) => {
-            setForm({ ...form, cell: e.target.value });
+          onChange={async (e) => {
+            const nextCell = e.target.value;
+            setForm({ ...form, cell: nextCell });
             setAttendees([]);
             setFirstTimerAttendees([]);
+            await loadPeopleForCell(nextCell);
           }}
           required
           disabled={cellOptions.length <= 1}
