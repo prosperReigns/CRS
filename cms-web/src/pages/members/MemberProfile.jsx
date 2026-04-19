@@ -97,16 +97,17 @@ function MemberProfile() {
             )}
           </div>
           <div className="grid flex-1 gap-3 md:grid-cols-2">
-            <input value={member.user?.first_name || ""} readOnly placeholder="First Name" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
-            <input value={member.user?.last_name || ""} readOnly placeholder="Surname" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
+            <input value={member.user?.first_name || ""} readOnly placeholder="First Name" aria-label="First Name" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
+            <input value={member.user?.last_name || ""} readOnly placeholder="Surname" aria-label="Surname" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
             <input value={member.user?.gender || ""} readOnly placeholder="Gender" aria-label="Gender" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
-            <input value={member.user?.phone || ""} readOnly placeholder="Phone No" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
-            <input value={member.user?.email || ""} readOnly placeholder="Email" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
+            <input value={member.user?.phone || ""} readOnly placeholder="Phone No" aria-label="Phone Number" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
+            <input value={member.user?.email || ""} readOnly placeholder="Email" aria-label="Email" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
             <textarea
               value={member.user?.home_address || ""}
               readOnly
               rows={2}
               placeholder="Home Address"
+              aria-label="Home Address"
               className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm md:col-span-2"
             />
           </div>
