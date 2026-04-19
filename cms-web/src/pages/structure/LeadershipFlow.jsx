@@ -365,15 +365,12 @@ function LeadershipFlow() {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-slate-900">Structure & Leadership Flow</h2>
-      <p className="text-sm text-slate-600">
-        Use this flow in order: 1) Staff setup, 2) Fellowship/Cell creation, 3) Fellowship leaders, 4) Cell leaders.
-      </p>
       {actionError && <ErrorState error={actionError} />}
       {success && <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{success}</p>}
 
       {canManageStaff && (
         <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">1. Create Staff & Responsibility</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Create Staff & Responsibility</h3>
           <form onSubmit={handleCreateStaff} className="space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
               <input
@@ -465,7 +462,7 @@ function LeadershipFlow() {
 
       {(canCreateFellowship || canCreateCell) && (
         <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">2. Create Fellowship and Cells</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Create Fellowship and Cells</h3>
           <div className="grid gap-4 xl:grid-cols-2">
             {canCreateFellowship && (
               <form onSubmit={handleFellowshipCreate} className="space-y-3 rounded-lg border border-slate-200 p-4">
@@ -575,7 +572,7 @@ function LeadershipFlow() {
 
       {canAssignFellowshipLeaders && (
         <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">3. Fellowship Leader Setup</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Fellowship Leader Setup</h3>
           <div className="grid gap-4 xl:grid-cols-2">
             <form onSubmit={handleAssignFellowshipLeader} className="space-y-3 rounded-lg border border-slate-200 p-4">
               <h4 className="font-semibold text-slate-900">Assign Existing Member</h4>
@@ -699,7 +696,7 @@ function LeadershipFlow() {
 
       {canAssignCellLeaders && (
         <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">4. Cell Leader Setup</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Cell Leader Setup</h3>
           <div className="grid gap-4 xl:grid-cols-2">
             <form onSubmit={handleAssignCellLeader} className="space-y-3 rounded-lg border border-slate-200 p-4">
               <h4 className="font-semibold text-slate-900">Assign Existing Member</h4>
