@@ -255,8 +255,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     output_field=DateField(),
                 )
             )
+            profiles_by_person_id = {
+                profile.person_id: profile for profile in MemberProfile.objects.filter(person_id__in=to_create_ids)
+            }
             for person in Person.objects.filter(id__in=to_create_ids):
-                profile = getattr(person, "member_profile", None)
+                profile = profiles_by_person_id.get(person.id)
                 if profile and profile.membership_status == MemberProfile.MembershipStatus.VISITOR:
                     profile.membership_status = MemberProfile.MembershipStatus.FIRST_TIMER
                     profile.is_first_timer = True

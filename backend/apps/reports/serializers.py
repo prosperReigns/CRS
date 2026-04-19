@@ -1,7 +1,7 @@
 import json
 
 from django.db import IntegrityError, transaction
-from django.db.models import Case, DateField, F, Value, When
+from django.db.models import Case, Count, DateField, F, Value, When
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
@@ -221,13 +221,28 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def _sync_cell_memberships(*, people, cell):
-        for person in people:
-            profile = getattr(person, "member_profile", None)
-            if profile and profile.cell_id == cell.id:
+        people = list(people)
+        if not people:
+            return
+
+        person_by_id = {person.id: person for person in people}
+        person_ids = list(person_by_id.keys())
+        profile_cell_by_person_id = {
+            person_id: cell_id
+            for person_id, cell_id in MemberProfile.objects.filter(person_id__in=person_ids).values_list("person_id", "cell_id")
+        }
+        attendance_counts = {
+            row["attendees"]: row["total"]
+            for row in CellReport.objects.filter(cell=cell, attendees__in=person_ids)
+            .values("attendees")
+            .annotate(total=Count("id"))
+        }
+
+        for person_id, person in person_by_id.items():
+            if profile_cell_by_person_id.get(person_id) == cell.id:
                 ensure_cell_membership(person, cell)
                 continue
-            attendance_count = CellReport.objects.filter(cell=cell, attendees=person).count()
-            if attendance_count >= 3:
+            if attendance_counts.get(person_id, 0) >= 3:
                 ensure_cell_membership(person, cell)
 
     @staticmethod
@@ -252,7 +267,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             try:
                 new_attendees = json.loads(new_attendees)
             except json.JSONDecodeError as exc:
-                raise serializers.ValidationError({"new_attendees": "Invalid new attendee payload."}) from exc
+                raise serializers.ValidationError({"new_attendees": f"Invalid new attendee payload: {exc.msg}."}) from exc
             attrs["new_attendees"] = new_attendees
         meeting_date = attrs.get("meeting_date") or getattr(self.instance, "meeting_date", None)
         extracted_images = self._extract_images()
