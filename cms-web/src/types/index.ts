@@ -28,6 +28,7 @@ export interface Member {
   user: User;
   cell: number | null;
   cell_name: string | null;
+  fellowship_name?: string | null;
    membership_status: "visitor" | "first_timer" | "regular" | "member";
    attendance_count: number;
   is_baptised: boolean;

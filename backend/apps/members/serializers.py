@@ -33,6 +33,7 @@ class MemberProfileSerializer(serializers.ModelSerializer):
     person_id = serializers.PrimaryKeyRelatedField(source="person", queryset=Person.objects.all(), write_only=True, required=False)
     person = serializers.SerializerMethodField(read_only=True)
     cell_name = serializers.CharField(source="cell.name", read_only=True)
+    fellowship_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MemberProfile
@@ -44,6 +45,7 @@ class MemberProfileSerializer(serializers.ModelSerializer):
             "person_id",
             "cell",
             "cell_name",
+            "fellowship_name",
             "membership_status",
             "attendance_count",
             "is_baptised",
@@ -63,7 +65,22 @@ class MemberProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "cell_name", "user", "person", "attendance_count"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "cell_name",
+            "fellowship_name",
+            "user",
+            "person",
+            "attendance_count",
+        ]
+
+    def get_fellowship_name(self, obj):
+        cell = obj.cell
+        if not cell or not cell.fellowship_id:
+            return None
+        return cell.fellowship.name
 
     def get_person(self, obj):
         person = obj.person

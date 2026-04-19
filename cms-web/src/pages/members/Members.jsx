@@ -38,7 +38,18 @@ const membershipBadgeClassMap = {
   visitor: "bg-slate-200 text-slate-700",
   regular: "bg-blue-100 text-blue-700",
 };
-const MEMBERSHIP_THRESHOLD = 4;
+
+const getTopLinesForRole = ({ role, fullName, cellName, fellowshipName }) => {
+  const topLines = [{ key: "name", label: fullName }];
+  if (role === "fellowship_leader") {
+    topLines.push({ key: "cell", label: `Cell: ${cellName || "-"}` });
+  }
+  if (role === "pastor" || role === "staff") {
+    topLines.push({ key: "fellowship", label: `Fellowship: ${fellowshipName || "-"}` });
+    topLines.push({ key: "cell", label: `Cell: ${cellName || "-"}` });
+  }
+  return topLines;
+};
 
 function Members() {
   const [members, setMembers] = useState([]);
@@ -86,21 +97,52 @@ function Members() {
       </select>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {filteredMembers.map((m) => (
-          <Link
-            key={m.id}
-            to={`/members/${m.id}`}
-            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
-            <p className="text-lg font-semibold text-slate-900">
-              {m.user?.username}
-            </p>
-            <p className="text-sm text-slate-600">
-              Name:{" "}
-              {[m.user?.first_name, m.user?.last_name]
-                .filter(Boolean)
-                .join(" ") || "-"}
-            </p>
+        {filteredMembers.map((m) => {
+          const fullName =
+            [m.user?.first_name, m.user?.last_name].filter(Boolean).join(" ") ||
+            m.user?.username ||
+            "-";
+          const initialsSource = [m.user?.first_name, m.user?.last_name].filter(Boolean);
+          const initials = initialsSource.length
+            ? initialsSource.map((name) => name[0]).join("").slice(0, 2).toUpperCase()
+            : fullName === "-"
+              ? "?"
+              : fullName.slice(0, 1).toUpperCase();
+          const topLines = getTopLinesForRole({
+            role: m.user?.role,
+            fullName,
+            cellName: m.cell_name,
+            fellowshipName: m.fellowship_name,
+          });
+          return (
+            <Link
+              key={m.id}
+              to={`/members/${m.id}`}
+              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
+              <div className="mb-3 flex items-start gap-3">
+                <div className="h-12 w-12 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  {m.user?.profile_picture ? (
+                    <img
+                      src={m.user.profile_picture}
+                      alt={`${fullName} profile`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">
+                      {initials}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  {topLines.map((line) => (
+                    <p key={line.key} className="truncate text-base font-bold text-slate-900">
+                      {line.label}
+                    </p>
+                  ))}
+                  <p className="text-sm text-slate-600">Gender: {m.user?.gender || "-"}</p>
+                </div>
+              </div>
             <div className="mt-1">
               <span
                 className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${roleBadgeClassMap[m.user?.role] || roleBadgeClassMap.member}`}
@@ -126,19 +168,15 @@ function Members() {
             </p>
             <p className="text-sm text-slate-600">Cell: {m.cell_name || "-"}</p>
             <p className="text-sm text-slate-600">
-              Attendance Progress:{" "}
-              {Math.min(m.attendance_count ?? 0, MEMBERSHIP_THRESHOLD)} /{" "}
-              {MEMBERSHIP_THRESHOLD}
-            </p>
-            <p className="text-sm text-slate-600">
               Baptised: {m.is_baptised ? "Yes" : "No"}
             </p>
             <p className="text-sm text-slate-600">
               Foundation: {m.foundation_completed ? "Yes" : "No"}
             </p>
             <p className="text-sm text-slate-600">Souls Won: {m.souls_won}</p>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
