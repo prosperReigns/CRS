@@ -17,6 +17,7 @@ function Sidebar({ isOpen, onToggle }) {
   const canMessage = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"].includes(
     user.role
   );
+  const canUseScheduling = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role);
   const isFrozen = Boolean(user.is_frozen);
   const baseLinkClass =
     "block rounded-lg px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700 hover:text-white";
@@ -105,6 +106,12 @@ function Sidebar({ isOpen, onToggle }) {
       {canMessage && !isFrozen && (
         <NavLink className={navClassName} to="/messages">
           Messages
+        </NavLink>
+      )}
+
+      {canUseScheduling && !isFrozen && (
+        <NavLink className={navClassName} to="/scheduling">
+          Scheduling
         </NavLink>
       )}
 
