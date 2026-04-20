@@ -15,10 +15,14 @@ const getStatusColor = (status) => {
       return "text-red-600";
     case "reviewed":
       return "text-amber-600";
+    case "fellowship_reviewed":
+      return "text-sky-600";
     default:
       return "text-slate-500";
   }
 };
+
+const formatStatus = (status) => status.replaceAll("_", " ");
 
 function MyReports() {
   const [reports, setReports] = useState([]);
@@ -65,7 +69,9 @@ function MyReports() {
             </p>
             <p className="text-sm text-slate-600">{report.meeting_date}</p>
             <p className="text-sm text-slate-600">{getReportTypeLabel(report.report_type)}</p>
-            <p className={`text-sm font-semibold capitalize ${getStatusColor(report.status)}`}>Status: {report.status}</p>
+            <p className={`text-sm font-semibold capitalize ${getStatusColor(report.status)}`}>
+              Status: {formatStatus(report.status)}
+            </p>
           </div>
         ))}
       </div>

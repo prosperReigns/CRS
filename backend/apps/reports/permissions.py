@@ -26,8 +26,6 @@ class CellReportPermission(BasePermission):
         if view.action in {"review"}:
             return (
                 role == User.Role.FELLOWSHIP_LEADER
-                or role == User.Role.PASTOR
-                or role == User.Role.ADMIN
                 or (role == User.Role.STAFF and has_staff_permission(request.user, "review_reports"))
             )
         if view.action in {"approve", "reject"}:
@@ -36,7 +34,7 @@ class CellReportPermission(BasePermission):
             return role in {User.Role.FELLOWSHIP_LEADER, User.Role.PASTOR, User.Role.ADMIN}
 
         if role == User.Role.STAFF:
-            return has_staff_permission(request.user, "view_reports")
+            return False
 
         return role in {
             User.Role.PASTOR,
@@ -60,9 +58,7 @@ class CellReportPermission(BasePermission):
         if role in {User.Role.PASTOR, User.Role.ADMIN}:
             return True
         if role == User.Role.STAFF:
-            if view.action == "review":
-                return has_staff_permission(request.user, "review_reports")
-            return has_staff_permission(request.user, "view_reports")
+            return view.action == "review" and has_staff_permission(request.user, "review_reports")
         if view.action in {"review", "comment"} and role == User.Role.FELLOWSHIP_LEADER:
             return self._is_fellowship_owner(request.user, obj)
         if view.action in {"update", "partial_update", "destroy"} and role == User.Role.CELL_LEADER:

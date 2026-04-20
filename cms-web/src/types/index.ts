@@ -150,7 +150,7 @@ export interface Report {
   offering_amount: string;
   summary: string;
   review_summary: string;
-  status: "pending" | "reviewed" | "approved" | "rejected";
+  status: "pending" | "fellowship_reviewed" | "reviewed" | "approved" | "rejected";
   reviewed_by: number | null;
   approved_by: number | null;
   reviewed_at: string | null;

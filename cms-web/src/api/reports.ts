@@ -31,9 +31,9 @@ export const getReports = async (): Promise<Report[]> => {
   }
 };
 
-export const approveReport = async (id: number): Promise<Report> => {
+export const approveReport = async (id: number, payload: { comment: string }): Promise<Report> => {
   try {
-    const response = await API.patch<Report>(`reports/reports/${id}/approve/`);
+    const response = await API.patch<Report>(`reports/reports/${id}/approve/`, payload);
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to approve report."));

@@ -6,6 +6,8 @@ import ErrorState from "../../components/ui/ErrorState";
 import EmptyState from "../../components/ui/EmptyState";
 import { getReportTypeLabel } from "./reportType";
 
+const formatStatus = (status) => status.replaceAll("_", " ");
+
 function ManageReports() {
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -51,7 +53,7 @@ function ManageReports() {
             </p>
             <p className="text-sm text-slate-600">{r.meeting_date}</p>
             <p className="text-sm text-slate-600">{getReportTypeLabel(r.report_type)}</p>
-            <p className="text-sm capitalize text-slate-600">Status: {r.status}</p>
+            <p className="text-sm capitalize text-slate-600">Status: {formatStatus(r.status)}</p>
           </div>
         ))}
       </div>
