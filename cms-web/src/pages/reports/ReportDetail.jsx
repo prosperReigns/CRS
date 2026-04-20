@@ -1,5 +1,6 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../context/AuthContext";
+import { hasResponsibility } from "../../utils/access";
 import {
   approveReport,
   rejectReport,
@@ -17,9 +18,15 @@ function ReportDetail({ report, refresh }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmAction, setConfirmAction] = useState("");
+  const [reviewSummary, setReviewSummary] = useState(report.review_summary || "");
   const canComment = ["fellowship_leader", "admin", "pastor"].includes(user?.role);
-  const canReview = user?.role === "fellowship_leader" && report.status === "pending";
+  const isStaffReviewer = user?.role === "staff" && hasResponsibility(user, "cell_ministry");
+  const canReview = (user?.role === "fellowship_leader" || isStaffReviewer) && report.status === "pending";
   const canApprove = ["admin", "pastor"].includes(user?.role) && report.status === "reviewed";
+
+  useEffect(() => {
+    setReviewSummary(report.review_summary || "");
+  }, [report.id, report.review_summary]);
   
   const handleApprove = async () => {
     try {
@@ -51,7 +58,7 @@ function ReportDetail({ report, refresh }) {
     try {
       setError("");
       setSuccess("");
-      await reviewReport(report.id);
+      await reviewReport(report.id, isStaffReviewer ? { review_summary: reviewSummary.trim() } : undefined);
       setSuccess("Report reviewed successfully.");
       refresh();
     } catch (err) {
@@ -112,6 +119,7 @@ function ReportDetail({ report, refresh }) {
         <p><strong>Offering:</strong> {report.offering_amount}</p>
         <p><strong>Attendee Names:</strong> {report.attendee_names || "-"}</p>
         <p><strong>Summary:</strong> {report.summary}</p>
+        <p><strong>Staff Review Summary:</strong> {report.review_summary || "-"}</p>
       </div>
 
       <h3 className="text-lg font-semibold text-slate-900">Images</h3>
@@ -122,9 +130,22 @@ function ReportDetail({ report, refresh }) {
       </div>
 
       <h3 className="text-lg font-semibold text-slate-900">Actions</h3>
+      {canReview && isStaffReviewer && (
+        <textarea
+          placeholder="Add staff review summary..."
+          className="min-h-24 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+          value={reviewSummary}
+          onChange={(event) => setReviewSummary(event.target.value)}
+        />
+      )}
       <div className="flex flex-wrap gap-2">
       {canReview && (
-        <Button onClick={handleReview}>Review</Button>
+        <Button
+          onClick={handleReview}
+          disabled={isStaffReviewer && reviewSummary.trim().length === 0}
+        >
+          Review
+        </Button>
       )}
 
       {canApprove && (

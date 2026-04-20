@@ -149,6 +149,7 @@ export interface Report {
   new_members: number;
   offering_amount: string;
   summary: string;
+  review_summary: string;
   status: "pending" | "reviewed" | "approved" | "rejected";
   reviewed_by: number | null;
   approved_by: number | null;

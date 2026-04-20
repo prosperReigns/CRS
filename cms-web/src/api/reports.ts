@@ -49,9 +49,9 @@ export const rejectReport = async (id: number): Promise<Report> => {
   }
 };
 
-export const reviewReport = async (id: number): Promise<Report> => {
+export const reviewReport = async (id: number, payload?: { review_summary?: string }): Promise<Report> => {
   try {
-    const response = await API.patch<Report>(`reports/reports/${id}/review/`);
+    const response = await API.patch<Report>(`reports/reports/${id}/review/`, payload ?? {});
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to review report."));
