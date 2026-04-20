@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='cellreport',
             name='review_summary',
-            field=models.TextField(blank=True),
+            field=models.TextField(blank=True, default=''),
         ),
     ]
