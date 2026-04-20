@@ -3,9 +3,9 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import viewsets
 
 from apps.accounts.models import User
-from .models import ScheduleEvent
-from .permissions import ScheduleEventPermission
-from .serializers import ScheduleEventSerializer
+from .models import ScheduleEvent, TodoItem
+from .permissions import ScheduleEventPermission, TodoItemPermission
+from .serializers import ScheduleEventSerializer, TodoItemSerializer
 
 
 class ScheduleEventViewSet(viewsets.ModelViewSet):
@@ -34,6 +34,34 @@ class ScheduleEventViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(end_datetime__gte=start_datetime)
         elif end_datetime:
             queryset = queryset.filter(start_datetime__lte=end_datetime)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class TodoItemViewSet(viewsets.ModelViewSet):
+    serializer_class = TodoItemSerializer
+    permission_classes = [TodoItemPermission]
+    search_fields = ["title", "description"]
+    ordering_fields = ["due_date", "priority", "is_completed", "created_at", "updated_at", "title"]
+    ordering = ["is_completed", "due_date", "-created_at"]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = TodoItem.objects.select_related("created_by").all()
+
+        if user.role not in {User.Role.ADMIN, User.Role.PASTOR, User.Role.STAFF}:
+            queryset = queryset.filter(created_by=user)
+
+        completed_param = self.request.query_params.get("completed")
+        if completed_param is not None:
+            normalized = str(completed_param).strip().lower()
+            if normalized in {"1", "true", "yes", "on"}:
+                queryset = queryset.filter(is_completed=True)
+            elif normalized in {"0", "false", "no", "off"}:
+                queryset = queryset.filter(is_completed=False)
 
         return queryset
 

@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createScheduleEvent, deleteScheduleEvent, getScheduleEvents, updateScheduleEvent } from "../../api/scheduling";
+import {
+  createScheduleEvent,
+  createTodoItem,
+  deleteScheduleEvent,
+  deleteTodoItem,
+  getScheduleEvents,
+  getTodoItems,
+  updateScheduleEvent,
+  updateTodoItem,
+} from "../../api/scheduling";
 import { getUsers } from "../../api/users";
 import ErrorState from "../../components/ui/ErrorState";
 import LoadingState from "../../components/ui/LoadingState";
@@ -26,6 +35,19 @@ const initialForm = {
   allDay: false,
   eventType: "meeting",
   participants: [],
+};
+
+const todoPriorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+
+const initialTodoForm = {
+  title: "",
+  description: "",
+  dueDate: "",
+  priority: "medium",
 };
 
 const formatDateKey = (date) => {
@@ -61,18 +83,30 @@ const isEventOnDate = (event, date) => {
   return eventStart <= dayEnd && eventEnd >= dayStart;
 };
 
+const formatDisplayDate = (value) => {
+  if (!value) return "No due date";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString();
+};
+
 function Scheduling() {
   const [events, setEvents] = useState([]);
+  const [todoItems, setTodoItems] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [todoError, setTodoError] = useState("");
   const [success, setSuccess] = useState("");
+  const [todoSuccess, setTodoSuccess] = useState("");
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [form, setForm] = useState(initialForm);
+  const [todoForm, setTodoForm] = useState(initialTodoForm);
   const [editingEventId, setEditingEventId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTodoSubmitting, setIsTodoSubmitting] = useState(false);
 
   const fetchEvents = useCallback(async (monthDate) => {
     const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1, 0, 0, 0, 0);
@@ -81,19 +115,26 @@ function Scheduling() {
     setEvents(data);
   }, []);
 
+  const fetchTodoList = useCallback(async () => {
+    const todos = await getTodoItems();
+    setTodoItems(todos);
+  }, []);
+
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [eventData, usersData] = await Promise.all([
+      const [eventData, usersData, todoData] = await Promise.all([
         getScheduleEvents(
           new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1, 0, 0, 0, 0).toISOString(),
           new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59, 999).toISOString()
         ),
         getUsers(),
+        getTodoItems(),
       ]);
       setEvents(eventData);
       setUsers(usersData.filter((user) => ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"].includes(user.role)));
+      setTodoItems(todoData);
     } catch (err) {
       setError(err.message || "Failed to load scheduling data.");
     } finally {
@@ -121,6 +162,23 @@ function Scheduling() {
     });
     return counts;
   }, [events, monthGrid]);
+
+  const sortedTodoItems = useMemo(
+    () =>
+      [...todoItems].sort((a, b) => {
+        if (a.is_completed !== b.is_completed) {
+          return a.is_completed ? 1 : -1;
+        }
+        if (a.due_date && b.due_date) {
+          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+        }
+        if (a.due_date) return -1;
+        if (b.due_date) return 1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }),
+    [todoItems]
+  );
+  const completedTodoCount = useMemo(() => todoItems.filter((item) => item.is_completed).length, [todoItems]);
 
   const resetForm = () => {
     setEditingEventId(null);
@@ -248,6 +306,59 @@ function Scheduling() {
     }
   };
 
+  const handleCreateTodo = async (event) => {
+    event.preventDefault();
+    setTodoError("");
+    setTodoSuccess("");
+    if (!todoForm.title.trim()) {
+      setTodoError("Task title is required.");
+      return;
+    }
+
+    setIsTodoSubmitting(true);
+    try {
+      await createTodoItem({
+        title: todoForm.title.trim(),
+        description: todoForm.description.trim(),
+        due_date: todoForm.dueDate || null,
+        priority: todoForm.priority,
+      });
+      setTodoSuccess("Task added to todo list.");
+      setTodoForm(initialTodoForm);
+      await fetchTodoList();
+    } catch (err) {
+      setTodoError(err.message || "Failed to create todo item.");
+    } finally {
+      setIsTodoSubmitting(false);
+    }
+  };
+
+  const handleToggleTodo = async (todoItem) => {
+    setTodoError("");
+    setTodoSuccess("");
+    try {
+      await updateTodoItem(todoItem.id, { is_completed: !todoItem.is_completed });
+      setTodoSuccess(todoItem.is_completed ? "Task marked as active." : "Task marked as completed.");
+      await fetchTodoList();
+    } catch (err) {
+      setTodoError(err.message || "Failed to update todo item.");
+    }
+  };
+
+  const handleDeleteTodo = async (todoItem) => {
+    const confirmed = window.confirm(`Delete task "${todoItem.title}"?`);
+    if (!confirmed) return;
+    setTodoError("");
+    setTodoSuccess("");
+    try {
+      await deleteTodoItem(todoItem.id);
+      setTodoSuccess("Task deleted.");
+      await fetchTodoList();
+    } catch (err) {
+      setTodoError(err.message || "Failed to delete todo item.");
+    }
+  };
+
   if (loading) {
     return <LoadingState label="Loading scheduling workspace..." />;
   }
@@ -359,6 +470,99 @@ function Scheduling() {
           </div>
         </section>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Pastor & Staff Todo List</h3>
+            <p className="text-sm text-slate-600">Track action items alongside your ministry schedule.</p>
+          </div>
+          <p className="rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+            {completedTodoCount}/{todoItems.length} completed
+          </p>
+        </div>
+        <ErrorState error={todoError} />
+        {todoSuccess && <p className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{todoSuccess}</p>}
+        <div className="grid gap-4 lg:grid-cols-3">
+          <form className="space-y-3 rounded-xl border border-slate-200 p-4 lg:col-span-1" onSubmit={handleCreateTodo}>
+            <input
+              type="text"
+              value={todoForm.title}
+              onChange={(event) => setTodoForm((prev) => ({ ...prev, title: event.target.value }))}
+              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+              placeholder="Task title"
+              required
+            />
+            <textarea
+              value={todoForm.description}
+              onChange={(event) => setTodoForm((prev) => ({ ...prev, description: event.target.value }))}
+              className="min-h-20 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+              placeholder="Description (optional)"
+            />
+            <input
+              type="date"
+              value={todoForm.dueDate}
+              onChange={(event) => setTodoForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+            />
+            <select
+              value={todoForm.priority}
+              onChange={(event) => setTodoForm((prev) => ({ ...prev, priority: event.target.value }))}
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+            >
+              {todoPriorityOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={isTodoSubmitting}
+              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-70"
+            >
+              {isTodoSubmitting ? "Adding..." : "Add Task"}
+            </button>
+          </form>
+
+          <div className="space-y-2 lg:col-span-2">
+            {sortedTodoItems.length === 0 && (
+              <p className="rounded-md border border-dashed border-slate-200 p-3 text-sm text-slate-500">No todo items yet.</p>
+            )}
+            {sortedTodoItems.map((todoItem) => (
+              <div key={todoItem.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-slate-200 p-4">
+                <div>
+                  <p className={`font-semibold ${todoItem.is_completed ? "text-slate-500 line-through" : "text-slate-900"}`}>
+                    {todoItem.title}
+                  </p>
+                  {todoItem.description && (
+                    <p className={`mt-1 text-sm ${todoItem.is_completed ? "text-slate-400" : "text-slate-600"}`}>{todoItem.description}</p>
+                  )}
+                  <p className="mt-1 text-xs text-slate-500">
+                    Due: {formatDisplayDate(todoItem.due_date)} • Priority: {todoItem.priority}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                    onClick={() => handleToggleTodo(todoItem)}
+                  >
+                    {todoItem.is_completed ? "Mark Active" : "Complete"}
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md bg-rose-100 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-200"
+                    onClick={() => handleDeleteTodo(todoItem)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">{editingEventId ? "Edit Event" : "Create Event"}</h3>

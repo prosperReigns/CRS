@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from apps.accounts.models import User
-from .models import ScheduleEvent
+from .models import ScheduleEvent, TodoItem
 
 
 class EventParticipantSerializer(serializers.ModelSerializer):
@@ -41,3 +41,31 @@ class ScheduleEventSerializer(serializers.ModelSerializer):
         if start_datetime and end_datetime and end_datetime <= start_datetime:
             raise serializers.ValidationError({"end_datetime": "End date/time must be after start date/time."})
         return attrs
+
+
+class TodoItemSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True)
+
+    class Meta:
+        model = TodoItem
+        fields = [
+            "id",
+            "title",
+            "description",
+            "due_date",
+            "is_completed",
+            "completed_at",
+            "priority",
+            "created_by",
+            "created_by_username",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "completed_at",
+            "created_by",
+            "created_by_username",
+            "created_at",
+            "updated_at",
+        ]

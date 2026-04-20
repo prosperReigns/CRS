@@ -1,5 +1,5 @@
 import API, { getErrorMessage } from "./client";
-import type { ScheduleEvent } from "../types";
+import type { ScheduleEvent, TodoItem } from "../types";
 import { toList } from "./utils";
 
 export interface ScheduleEventPayload {
@@ -50,5 +50,50 @@ export const deleteScheduleEvent = async (eventId: number): Promise<void> => {
     await API.delete(`scheduling/events/${eventId}/`);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to delete schedule event."));
+  }
+};
+
+export interface TodoItemPayload {
+  title: string;
+  description?: string;
+  due_date?: string | null;
+  priority?: TodoItem["priority"];
+  is_completed?: boolean;
+}
+
+export const getTodoItems = async (completed?: boolean): Promise<TodoItem[]> => {
+  try {
+    const response = await API.get<TodoItem[] | { results: TodoItem[] }>("scheduling/todos/", {
+      params: completed === undefined ? undefined : { completed },
+    });
+    return toList(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch todo items."));
+  }
+};
+
+export const createTodoItem = async (payload: TodoItemPayload): Promise<TodoItem> => {
+  try {
+    const response = await API.post<TodoItem>("scheduling/todos/", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to create todo item."));
+  }
+};
+
+export const updateTodoItem = async (todoId: number, payload: Partial<TodoItemPayload>): Promise<TodoItem> => {
+  try {
+    const response = await API.patch<TodoItem>(`scheduling/todos/${todoId}/`, payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update todo item."));
+  }
+};
+
+export const deleteTodoItem = async (todoId: number): Promise<void> => {
+  try {
+    await API.delete(`scheduling/todos/${todoId}/`);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to delete todo item."));
   }
 };

@@ -222,6 +222,20 @@ export interface ScheduleEvent {
   updated_at: string;
 }
 
+export interface TodoItem {
+  id: number;
+  title: string;
+  description: string;
+  due_date: string | null;
+  is_completed: boolean;
+  completed_at: string | null;
+  priority: "low" | "medium" | "high";
+  created_by: number | null;
+  created_by_username?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Message {
   id: number;
   sender: Pick<User, "id" | "username">;
