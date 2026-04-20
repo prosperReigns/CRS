@@ -39,10 +39,27 @@ def scoped_reports(user):
         .all()
     )
 
-    if user.role in {User.Role.PASTOR, User.Role.ADMIN}:
+    if user.role == User.Role.ADMIN:
         return qs
+    if user.role == User.Role.PASTOR:
+        return qs.filter(
+            status__in=[
+                CellReport.Status.REVIEWED,
+                CellReport.Status.APPROVED,
+                CellReport.Status.REJECTED,
+            ]
+        )
     if user.role == User.Role.STAFF:
-        return qs if has_staff_permission(user, "view_reports") else qs.none()
+        if not has_staff_permission(user, "view_reports"):
+            return qs.none()
+        return qs.filter(
+            status__in=[
+                CellReport.Status.FELLOWSHIP_REVIEWED,
+                CellReport.Status.REVIEWED,
+                CellReport.Status.APPROVED,
+                CellReport.Status.REJECTED,
+            ]
+        )
     if user.role == User.Role.FELLOWSHIP_LEADER:
         return qs.filter(cell__fellowship__leader=user)
     if user.role == User.Role.CELL_LEADER:
@@ -77,42 +94,83 @@ class CellReportViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def review(self, request, pk=None):
         report = self.get_object()
-        is_pastor = request.user.role in {User.Role.PASTOR, User.Role.ADMIN}
         is_staff_reviewer = request.user.role == User.Role.STAFF and has_staff_permission(request.user, "review_reports")
         is_fellowship_reviewer = request.user.role == User.Role.FELLOWSHIP_LEADER
 
-        if not (is_pastor or is_staff_reviewer or is_fellowship_reviewer):
-            raise PermissionDenied("Only pastors, admins, fellowship leaders, or authorized staff can review reports.")
+        if not (is_staff_reviewer or is_fellowship_reviewer):
+            raise PermissionDenied("Only fellowship leaders or authorized staff can review reports.")
         if is_fellowship_reviewer and report.cell.fellowship.leader_id != request.user.id:
             raise PermissionDenied("You can only review reports in your fellowship.")
-        if report.status != CellReport.Status.PENDING:
-            return Response({"detail": "Only pending reports can be reviewed."}, status=status.HTTP_400_BAD_REQUEST)
         review_summary = (request.data.get("review_summary") or "").strip()
-        if is_staff_reviewer and not review_summary:
+
+        if is_fellowship_reviewer:
+            if report.status != CellReport.Status.PENDING:
+                return Response(
+                    {"detail": "Only pending reports can be reviewed by fellowship leaders."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not review_summary:
+                return Response(
+                    {"review_summary": "Review summary is required for fellowship review."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            self._update_report(
+                report,
+                status=CellReport.Status.FELLOWSHIP_REVIEWED,
+                reviewed_by=request.user,
+                reviewed_at=timezone.now(),
+                review_summary=f"Fellowship Review: {review_summary}",
+            )
+
+            self._log(report, ReportActivityLog.Action.REVIEWED)
+            self._notify(report, "Report Reviewed", "Your cell report has been reviewed by your fellowship leader.")
+            self._notify_staff_reviewers(
+                report,
+                title="Fellowship Reviewed Report Awaiting Staff Review",
+                message=(
+                    f"{request.user.username} reviewed {report.cell.name} on {report.meeting_date}. "
+                    f"Fellowship summary: {review_summary}"
+                ),
+            )
+            return Response(self._serialize_report(report))
+
+        if report.status != CellReport.Status.FELLOWSHIP_REVIEWED:
+            return Response(
+                {"detail": "Only fellowship-reviewed reports can be reviewed by staff."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not review_summary:
             return Response(
                 {"review_summary": "Review summary is required for staff review."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        merged_summary = report.review_summary.strip()
+        merged_summary = (
+            f"{merged_summary}\n\nStaff Review: {review_summary}"
+            if merged_summary
+            else f"Staff Review: {review_summary}"
+        )
 
         self._update_report(
             report,
             status=CellReport.Status.REVIEWED,
             reviewed_by=request.user,
             reviewed_at=timezone.now(),
-            review_summary=review_summary,
+            review_summary=merged_summary,
         )
 
         self._log(report, ReportActivityLog.Action.REVIEWED)
-        self._notify(report, "Report Reviewed", "Your cell report has been reviewed.")
-        if is_staff_reviewer:
-            self._notify_pastors(
-                report,
-                title="Reviewed Sunday Attendance Awaiting Approval",
-                message=(
-                    f"{request.user.username} reviewed attendance for {report.cell.name} on {report.meeting_date}. "
-                    f"Staff summary: {review_summary}"
-                ),
-            )
+        self._notify(report, "Report Reviewed", "Your cell report has been reviewed by staff.")
+        self._notify_pastors(
+            report,
+            title="Reviewed Sunday Attendance Awaiting Approval",
+            message=(
+                f"{request.user.username} reviewed attendance for {report.cell.name} on {report.meeting_date}. "
+                f"Staff summary: {review_summary}"
+            ),
+        )
         return Response(self._serialize_report(report))
 
     @action(detail=True, methods=["patch"])
@@ -123,6 +181,9 @@ class CellReportViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Only pastors or admins can approve reports.")
         if report.status != CellReport.Status.REVIEWED:
             return Response({"detail": "Report must be reviewed before approval."}, status=status.HTTP_400_BAD_REQUEST)
+        approval_comment = (request.data.get("comment") or "").strip()
+        if not approval_comment:
+            return Response({"comment": "Approval comment is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         self._update_report(
             report,
@@ -130,8 +191,13 @@ class CellReportViewSet(viewsets.ModelViewSet):
             approved_by=request.user,
             approved_at=timezone.now(),
         )
+        ReportComment.objects.create(
+            report=report,
+            author=request.user,
+            comment=approval_comment,
+        )
 
-        self._log(report, ReportActivityLog.Action.APPROVED)
+        self._log(report, ReportActivityLog.Action.APPROVED, note=approval_comment)
         self._notify(report, "Report Approved", "Your cell report has been approved.")
         return Response(self._serialize_report(report))
 
@@ -222,6 +288,25 @@ class CellReportViewSet(viewsets.ModelViewSet):
                     category=Notification.Category.REPORT,
                 )
                 for user_id in pastor_ids
+                if user_id != self.request.user.id
+            ]
+        )
+
+    def _notify_staff_reviewers(self, report, *, title, message):
+        staff_ids = list(
+            User.objects.filter(role=User.Role.STAFF, staff_responsibilities__code="cell_ministry")
+            .distinct()
+            .values_list("id", flat=True)
+        )
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user_id=user_id,
+                    title=title,
+                    message=message,
+                    category=Notification.Category.REPORT,
+                )
+                for user_id in staff_ids
                 if user_id != self.request.user.id
             ]
         )

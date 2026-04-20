@@ -11,6 +11,7 @@ User = settings.AUTH_USER_MODEL
 class CellReport(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
+        FELLOWSHIP_REVIEWED = "fellowship_reviewed", "Fellowship Reviewed"
         REVIEWED = "reviewed", "Reviewed"
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"

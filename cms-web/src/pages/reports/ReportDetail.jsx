@@ -15,26 +15,36 @@ import { getReportTypeLabel } from "./reportType";
 function ReportDetail({ report, refresh }) {
   const { user } = useContext(AuthContext);
   const [comment, setComment] = useState("");
+  const [approvalComment, setApprovalComment] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmAction, setConfirmAction] = useState("");
   const [reviewSummary, setReviewSummary] = useState(report.review_summary || "");
   const canComment = ["fellowship_leader", "admin", "pastor"].includes(user?.role);
   const isStaffReviewer = user?.role === "staff" && hasResponsibility(user, "cell_ministry");
-  const canReview = (user?.role === "fellowship_leader" || isStaffReviewer) && report.status === "pending";
+  const isFellowshipReviewer = user?.role === "fellowship_leader";
+  const canReview =
+    (isFellowshipReviewer && report.status === "pending") ||
+    (isStaffReviewer && report.status === "fellowship_reviewed");
   const canApprove = ["admin", "pastor"].includes(user?.role) && report.status === "reviewed";
 
   useEffect(() => {
     setReviewSummary(report.review_summary || "");
+    setApprovalComment("");
   }, [report.id, report.review_summary]);
   
   const handleApprove = async () => {
+    if (!approvalComment.trim()) {
+      setError("Approval comment is required.");
+      return;
+    }
     try {
       setError("");
       setSuccess("");
-      await approveReport(report.id);
+      await approveReport(report.id, { comment: approvalComment.trim() });
       setConfirmAction("");
       setSuccess("Report approved successfully.");
+      setApprovalComment("");
       refresh();
     } catch (err) {
       setError(err.message || "Failed to approve report.");
@@ -55,10 +65,14 @@ function ReportDetail({ report, refresh }) {
   };
 
   const handleReview = async () => {
+    if (!reviewSummary.trim()) {
+      setError("Review summary is required.");
+      return;
+    }
     try {
       setError("");
       setSuccess("");
-      await reviewReport(report.id, isStaffReviewer ? { review_summary: reviewSummary.trim() } : undefined);
+      await reviewReport(report.id, { review_summary: reviewSummary.trim() });
       setSuccess("Report reviewed successfully.");
       refresh();
     } catch (err) {
@@ -119,7 +133,7 @@ function ReportDetail({ report, refresh }) {
         <p><strong>Offering:</strong> {report.offering_amount}</p>
         <p><strong>Attendee Names:</strong> {report.attendee_names || "-"}</p>
         <p><strong>Summary:</strong> {report.summary}</p>
-        <p><strong>Staff Review Summary:</strong> {report.review_summary || "-"}</p>
+        <p><strong>Review Summary:</strong> {report.review_summary || "-"}</p>
       </div>
 
       <h3 className="text-lg font-semibold text-slate-900">Images</h3>
@@ -130,9 +144,9 @@ function ReportDetail({ report, refresh }) {
       </div>
 
       <h3 className="text-lg font-semibold text-slate-900">Actions</h3>
-      {canReview && isStaffReviewer && (
+      {canReview && (
         <textarea
-          placeholder="Add staff review summary..."
+          placeholder={isStaffReviewer ? "Add staff review summary..." : "Add fellowship review summary..."}
           className="min-h-24 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
           value={reviewSummary}
           onChange={(event) => setReviewSummary(event.target.value)}
@@ -142,7 +156,7 @@ function ReportDetail({ report, refresh }) {
       {canReview && (
         <Button
           onClick={handleReview}
-          disabled={isStaffReviewer && reviewSummary.trim().length === 0}
+          disabled={reviewSummary.trim().length === 0}
         >
           Review
         </Button>
@@ -150,6 +164,12 @@ function ReportDetail({ report, refresh }) {
 
       {canApprove && (
         <>
+          <textarea
+            placeholder="Add approval comment..."
+            className="min-h-24 w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring-2"
+            value={approvalComment}
+            onChange={(event) => setApprovalComment(event.target.value)}
+          />
           <Button onClick={() => setConfirmAction("approve")}>Approve</Button>
           <Button onClick={() => setConfirmAction("reject")}>Reject</Button>
         </>
