@@ -92,6 +92,7 @@ class CellReportSerializer(serializers.ModelSerializer):
             "new_members",
             "offering_amount",
             "summary",
+            "review_summary",
             "status",
             "reviewed_by",
             "reviewer",
@@ -120,6 +121,7 @@ class CellReportSerializer(serializers.ModelSerializer):
             "reviewed_at",
             "approved_at",
             "attendance_count",
+            "review_summary",
             "created_at",
             "updated_at",
             "images",
@@ -437,6 +439,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
             rejected_report.new_members = validated_data["new_members"]
             rejected_report.offering_amount = validated_data["offering_amount"]
             rejected_report.summary = validated_data["summary"]
+            rejected_report.review_summary = ""
             rejected_report.submitted_by = request.user
             rejected_report.leader = cell.leader
             rejected_report.status = CellReport.Status.PENDING
@@ -454,6 +457,7 @@ class CellReportCreateUpdateSerializer(serializers.ModelSerializer):
                     "new_members",
                     "offering_amount",
                     "summary",
+                    "review_summary",
                     "submitted_by",
                     "leader",
                     "status",

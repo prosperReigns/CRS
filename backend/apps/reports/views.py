@@ -87,16 +87,32 @@ class CellReportViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can only review reports in your fellowship.")
         if report.status != CellReport.Status.PENDING:
             return Response({"detail": "Only pending reports can be reviewed."}, status=status.HTTP_400_BAD_REQUEST)
+        review_summary = (request.data.get("review_summary") or "").strip()
+        if is_staff_reviewer and not review_summary:
+            return Response(
+                {"review_summary": "Review summary is required for staff review."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         self._update_report(
             report,
             status=CellReport.Status.REVIEWED,
             reviewed_by=request.user,
             reviewed_at=timezone.now(),
+            review_summary=review_summary,
         )
 
         self._log(report, ReportActivityLog.Action.REVIEWED)
         self._notify(report, "Report Reviewed", "Your cell report has been reviewed.")
+        if is_staff_reviewer:
+            self._notify_pastors(
+                report,
+                title="Reviewed Sunday Attendance Awaiting Approval",
+                message=(
+                    f"{request.user.username} reviewed attendance for {report.cell.name} on {report.meeting_date}. "
+                    f"Staff summary: {review_summary}"
+                ),
+            )
         return Response(self._serialize_report(report))
 
     @action(detail=True, methods=["patch"])
@@ -191,6 +207,21 @@ class CellReportViewSet(viewsets.ModelViewSet):
                     category=Notification.Category.REPORT,
                 )
                 for user_id in recipient_ids
+                if user_id != self.request.user.id
+            ]
+        )
+
+    def _notify_pastors(self, report, *, title, message):
+        pastor_ids = list(User.objects.filter(role=User.Role.PASTOR).values_list("id", flat=True))
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user_id=user_id,
+                    title=title,
+                    message=message,
+                    category=Notification.Category.REPORT,
+                )
+                for user_id in pastor_ids
                 if user_id != self.request.user.id
             ]
         )
