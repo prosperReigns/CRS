@@ -197,6 +197,31 @@ export interface ChurchService {
   is_active: boolean;
 }
 
+export interface ScheduleEventParticipant {
+  id: number;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: User["role"];
+}
+
+export interface ScheduleEvent {
+  id: number;
+  title: string;
+  description: string;
+  location: string;
+  start_datetime: string;
+  end_datetime: string;
+  all_day: boolean;
+  event_type: "service" | "meeting" | "counseling" | "outreach" | "training" | "administrative" | "other";
+  created_by: number | null;
+  created_by_username?: string;
+  participants: number[];
+  participant_details: ScheduleEventParticipant[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Message {
   id: number;
   sender: Pick<User, "id" | "username">;

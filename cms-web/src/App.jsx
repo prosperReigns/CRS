@@ -16,11 +16,13 @@ import VisitationReporting from "./pages/members/VisitationReporting";
 import Messaging from "./pages/messaging/Messaging";
 import LeadershipFlow from "./pages/structure/LeadershipFlow";
 import Settings from "./pages/settings/Settings";
+import Scheduling from "./pages/scheduling/Scheduling";
 
 const memberManagerRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"];
 const messagingRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader", "teacher", "member"];
 const structureRoles = ["admin", "pastor", "staff", "fellowship_leader"];
 const settingsRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"];
+const schedulingRoles = ["admin", "pastor", "staff", "fellowship_leader", "cell_leader"];
 
 function ProtectedLayoutRoute({ allowedRoles, allowedResponsibilities, children }) {
   return (
@@ -163,6 +165,15 @@ function App() {
           element={
             <ProtectedLayoutRoute allowedRoles={messagingRoles}>
               <Messaging />
+            </ProtectedLayoutRoute>
+          }
+        />
+
+        <Route
+          path="/scheduling"
+          element={
+            <ProtectedLayoutRoute allowedRoles={schedulingRoles}>
+              <Scheduling />
             </ProtectedLayoutRoute>
           }
         />

@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'apps.reports.apps.ReportsConfig',
     'apps.members.apps.MembersConfig',
     'apps.communication.apps.CommunicationConfig',
+    'apps.scheduling.apps.SchedulingConfig',
     "core",
 ]
 
